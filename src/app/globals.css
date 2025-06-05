@@ -125,7 +125,7 @@ body {
     );
     background-size: 300% 100%; /* Make gradient wider to allow for sliding effect */
     /* Apply the animation defined in tailwind.config.ts */
-    animation: focus-shine 3s linear infinite; /* Adjusted duration */
+    animation: focus-shine 3s linear 0.3s infinite; /* Added 0.3s delay */
   }
 
   /* The actual input field within the animated wrapper */
