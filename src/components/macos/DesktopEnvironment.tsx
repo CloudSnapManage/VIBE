@@ -39,11 +39,11 @@ const DesktopEnvironment: React.FC = () => {
   const [isClientHydrated, setIsClientHydrated] = useState(false);
 
   const [isFinderVisible, setIsFinderVisible] = useState(true);
-  const [finderPosition, setFinderPosition] = useState({ x: 0, y: 0 });
+  const [finderPosition, setFinderPosition] = useLocalStorage('finderPosition', { x: 20, y: 20 });
   const [finderZIndex, setFinderZIndex] = useState(20);
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [settingsPosition, setSettingsPosition] = useState({ x: 50, y: 50 });
+  const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', { x: 70, y: 70 });
   const [settingsZIndex, setSettingsZIndex] = useState(20);
   
   const [maxZIndex, setMaxZIndex] = useState(20);
@@ -53,6 +53,11 @@ const DesktopEnvironment: React.FC = () => {
 
   useEffect(() => {
     setIsClientHydrated(true);
+    // Initialize positions if this is the first load and localStorage is empty
+    // This ensures windows are somewhat centered initially rather than 0,0 if localStorage was never set.
+    // However, useLocalStorage already handles initial values.
+    // So this block might be redundant if initial values for useLocalStorage are sufficient.
+    // For now, let's assume initial values are fine.
   }, []);
 
   const bringToFront = useCallback((setter: React.Dispatch<React.SetStateAction<number>>) => {
