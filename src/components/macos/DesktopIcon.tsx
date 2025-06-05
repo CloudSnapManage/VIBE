@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 
 interface DesktopIconProps {
   name: string;
-  icon: LucideIcon;
+  icon: LucideIcon; // Ensure this is always a LucideIcon component
   onClick?: () => void;
 }
 
@@ -18,7 +18,7 @@ const DesktopIcon: React.FC<DesktopIconProps> = ({ name, icon: Icon, onClick }) 
       aria-label={name}
     >
       <div className="p-2 bg-black/5 group-hover:bg-black/10 rounded-lg mb-1.5">
-        <Icon size={32} className="text-white/90" />
+        {Icon ? <Icon size={32} className="text-white/90" /> : <div className="w-8 h-8 bg-white/20 rounded" />}
       </div>
       <p className="text-xs text-center text-white/90 truncate w-full select-none">{name}</p>
     </button>

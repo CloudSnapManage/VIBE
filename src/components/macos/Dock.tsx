@@ -1,27 +1,22 @@
 
 import React from 'react';
 import DockItem from './DockItem';
-import { FolderOpen, LayoutGrid, Globe2, MessageSquare, Mail, MapPin, Image as ImageIcon, Video, CalendarDays, Settings, Store } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import type { AppDefinition } from '@/lib/types';
+import * as LucideIcons from 'lucide-react'; // Import all icons
 
 interface DockProps {
-  onFinderClick?: () => void;
+  items: AppDefinition[];
 }
 
-const Dock: React.FC<DockProps> = ({ onFinderClick }) => {
-  const dockItems = [
-    { name: 'Finder', icon: FolderOpen, action: onFinderClick, isActive: true }, // Example: Finder is "active"
-    { name: 'Launchpad', icon: LayoutGrid, action: () => console.log('Launchpad clicked') },
-    { name: 'Safari', icon: Globe2, url: 'https://www.apple.com/safari/' },
-    { name: 'Messages', icon: MessageSquare, action: () => console.log('Messages clicked') },
-    { name: 'Mail', icon: Mail, url: 'mailto:' },
-    { name: 'Maps', icon: MapPin, action: () => console.log('Maps clicked') },
-    { name: 'Photos', icon: ImageIcon, action: () => console.log('Photos clicked') },
-    { name: 'FaceTime', icon: Video, action: () => console.log('FaceTime clicked') },
-    { name: 'Calendar', icon: CalendarDays, action: () => console.log('Calendar clicked') },
-    { name: 'Settings', icon: Settings, action: () => console.log('Settings clicked') },
-    { name: 'App Store', icon: Store, url: 'https://www.apple.com/app-store/' },
-  ];
+const Dock: React.FC<DockProps> = ({ items }) => {
+  const getIconComponent = (iconNameOrComponent: AppDefinition['icon']): LucideIcons.LucideIcon => {
+    if (typeof iconNameOrComponent === 'string') {
+      const IconComponent = (LucideIcons as any)[iconNameOrComponent as any];
+      return IconComponent || LucideIcons.Link; // Default to Link icon if string name not found
+    }
+    return iconNameOrComponent as LucideIcons.LucideIcon; // It's already a component
+  };
 
   return (
     <footer 
@@ -29,20 +24,26 @@ const Dock: React.FC<DockProps> = ({ onFinderClick }) => {
       aria-label="Application Dock"
     >
       <div className="bg-dock-bg backdrop-blur-lg shadow-dock rounded-xl p-2 flex items-end space-x-2 h-[60px]">
-        {dockItems.map((item, index) => (
-          <React.Fragment key={item.name}>
-            <DockItem 
-              name={item.name} 
-              icon={item.icon} 
-              onClick={item.action} 
-              url={item.url}
-              isActive={item.isActive}
-            />
-            {(item.name === 'Launchpad' || item.name === 'Calendar') && (
-              <Separator orientation="vertical" className="h-10 bg-foreground/10 mx-1" />
-            )}
-          </React.Fragment>
-        ))}
+        {items.map((item, index) => {
+          const IconComponent = getIconComponent(item.icon);
+          return (
+            <React.Fragment key={item.id}>
+              <DockItem 
+                name={item.name} 
+                icon={IconComponent} 
+                onClick={item.type === 'app' ? item.action : undefined}
+                url={item.type === 'url' ? item.url : undefined}
+                isActive={false} // isActive logic can be enhanced later
+              />
+              {/* Example separators, adjust as needed or make dynamic */}
+              {(item.name === 'Finder' || item.name === 'System Settings' || item.id === 'safari-default') && index < items.length -1 && (
+                 !items[index+1].isDefault || item.name === 'System Settings'
+              ) && (
+                 <Separator orientation="vertical" className="h-10 bg-foreground/10 mx-1" />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </footer>
   );

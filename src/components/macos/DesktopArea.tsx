@@ -4,8 +4,11 @@
 import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent, useCallback } from 'react';
 import Image from 'next/image';
 import FinderWindow from './FinderWindow';
+import SettingsWindow from './SettingsWindow'; // Import SettingsWindow
 import DesktopIcon from './DesktopIcon';
-import { Search } from 'lucide-react'; // Example icons
+import type { AppDefinition } from '@/lib/types';
+import { Link as LinkIcon } from 'lucide-react';
+
 
 const wallpapers = {
   morning: { src: 'https://placehold.co/1920x1080.png', hint: 'sunrise mountain' },
@@ -15,14 +18,6 @@ const wallpapers = {
 };
 
 type TimeOfDay = keyof typeof wallpapers;
-
-interface DesktopItem {
-  id: string;
-  name: string;
-  icon: React.ElementType;
-  actionType: 'toggleFinder' | 'openUrl';
-  url?: string;
-}
 
 const getTimeOfDay = (): TimeOfDay => {
   const hour = new Date().getHours();
@@ -36,11 +31,9 @@ const DesktopClock: React.FC = () => {
   const [timeString, setTimeString] = useState<string | null>(null);
 
   useEffect(() => {
-    setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    const timerId = setInterval(() => {
-      setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 1000 * 60); // Update every minute, initial set to second for faster feedback
-
+    const update = () => setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    update(); // Initial set
+    const timerId = setInterval(update, 1000 * 60); // Update every minute for display
     return () => clearInterval(timerId);
   }, []);
 
@@ -57,6 +50,12 @@ const DesktopClock: React.FC = () => {
   );
 };
 
+interface WindowDragState {
+  id: 'finder' | 'settings';
+  startPos: { x: number; y: number };
+  windowStartPos: { x: number; y: number };
+}
+
 interface DesktopAreaProps {
   isFinderVisible: boolean;
   toggleFinderVisibility: () => void;
@@ -64,6 +63,15 @@ interface DesktopAreaProps {
   finderPosition: { x: number; y: number };
   setFinderPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
   finderZIndex: number;
+
+  isSettingsVisible: boolean;
+  toggleSettingsVisibility: () => void;
+  bringSettingsToFront: () => void;
+  settingsPosition: { x: number; y: number };
+  setSettingsPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
+  settingsZIndex: number;
+  
+  desktopItems: AppDefinition[];
 }
 
 const DesktopArea: React.FC<DesktopAreaProps> = ({
@@ -73,52 +81,58 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
   finderPosition,
   setFinderPosition,
   finderZIndex,
+  isSettingsVisible,
+  toggleSettingsVisibility,
+  bringSettingsToFront,
+  settingsPosition,
+  setSettingsPosition,
+  settingsZIndex,
+  desktopItems,
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
 
-  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const windowStartPos = useRef<{ x: number; y: number } | null>(null);
+  const draggingWindowRef = useRef<WindowDragState | null>(null);
   const latestMousePosition = useRef<{ clientX: number; clientY: number } | null>(null);
   const animationFrameId = useRef<number | null>(null);
 
   useEffect(() => {
     setTimeOfDay(getTimeOfDay());
-    const interval = setInterval(() => {
-      setTimeOfDay(getTimeOfDay());
-    }, 1000 * 60 * 5);
+    const interval = setInterval(() => setTimeOfDay(getTimeOfDay()), 1000 * 60 * 5);
     return () => clearInterval(interval);
   }, []);
 
-  const desktopItems: DesktopItem[] = [
-    { id: 'search-app', name: 'Search', icon: Search, actionType: 'toggleFinder' },
-  ];
-
-  const handleDesktopItemClick = (item: DesktopItem) => {
-    if (item.actionType === 'toggleFinder') {
-      toggleFinderVisibility();
-      if (!isFinderVisible) bringFinderToFront();
-    } else if (item.actionType === 'openUrl' && item.url) {
+  const handleDesktopItemClick = (item: AppDefinition) => {
+    if (item.type === 'app' && item.action) {
+      item.action();
+    } else if (item.type === 'url' && item.url) {
       window.open(item.url, '_blank', 'noopener,noreferrer');
     }
   };
   
   const performDragUpdate = useCallback(() => {
-    if (!dragStartPos.current || !windowStartPos.current || !latestMousePosition.current) {
+    if (!draggingWindowRef.current || !latestMousePosition.current) {
       animationFrameId.current = null; 
       return;
     }
+    
+    const { id, startPos, windowStartPos } = draggingWindowRef.current;
+    const dx = latestMousePosition.current.clientX - startPos.x;
+    const dy = latestMousePosition.current.clientY - startPos.y;
 
-    const dx = latestMousePosition.current.clientX - dragStartPos.current.x;
-    const dy = latestMousePosition.current.clientY - dragStartPos.current.y;
+    const newPosition = {
+      x: windowStartPos.x + dx,
+      y: windowStartPos.y + dy,
+    };
 
-    setFinderPosition({
-      x: windowStartPos.current.x + dx,
-      y: windowStartPos.current.y + dy,
-    });
+    if (id === 'finder') {
+      setFinderPosition(newPosition);
+    } else if (id === 'settings') {
+      setSettingsPosition(newPosition);
+    }
 
     animationFrameId.current = null; 
-  }, [setFinderPosition]);
+  }, [setFinderPosition, setSettingsPosition]);
 
   const handleDraggingInternal = useCallback((event: MouseEvent) => {
     event.preventDefault();
@@ -138,29 +152,49 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     document.removeEventListener('mousemove', handleDraggingInternal);
     document.removeEventListener('mouseup', handleDragEndInternal);
 
-    if (dragStartPos.current && windowStartPos.current && latestMousePosition.current) {
-       const dx = latestMousePosition.current.clientX - dragStartPos.current.x;
-       const dy = latestMousePosition.current.clientY - dragStartPos.current.y;
-       setFinderPosition({
-          x: windowStartPos.current.x + dx,
-          y: windowStartPos.current.y + dy,
-       });
+    if (draggingWindowRef.current && latestMousePosition.current) {
+       const { id, startPos, windowStartPos } = draggingWindowRef.current;
+       const dx = latestMousePosition.current.clientX - startPos.x;
+       const dy = latestMousePosition.current.clientY - startPos.y;
+       const finalPosition = {
+          x: windowStartPos.x + dx,
+          y: windowStartPos.y + dy,
+       };
+       if (id === 'finder') setFinderPosition(finalPosition);
+       else if (id === 'settings') setSettingsPosition(finalPosition);
     }
 
-    dragStartPos.current = null;
-    windowStartPos.current = null;
+    draggingWindowRef.current = null;
     latestMousePosition.current = null;
-  }, [handleDraggingInternal, setFinderPosition]);
+  }, [handleDraggingInternal, setFinderPosition, setSettingsPosition]);
 
-  const handleDragStart = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    bringFinderToFront();
-    dragStartPos.current = { x: event.clientX, y: event.clientY };
-    windowStartPos.current = finderPosition;
+  const handleWindowDragStart = useCallback((
+    event: ReactMouseEvent<HTMLDivElement>, 
+    windowId: 'finder' | 'settings'
+  ) => {
+    let currentPosition: {x: number; y: number};
+    if (windowId === 'finder') {
+      bringFinderToFront();
+      currentPosition = finderPosition;
+    } else {
+      bringSettingsToFront();
+      currentPosition = settingsPosition;
+    }
+
+    draggingWindowRef.current = {
+      id: windowId,
+      startPos: { x: event.clientX, y: event.clientY },
+      windowStartPos: currentPosition,
+    };
     latestMousePosition.current = { clientX: event.clientX, clientY: event.clientY };
 
     document.addEventListener('mousemove', handleDraggingInternal);
     document.addEventListener('mouseup', handleDragEndInternal);
-  }, [bringFinderToFront, finderPosition, handleDraggingInternal, handleDragEndInternal]);
+  }, [
+    bringFinderToFront, finderPosition, 
+    bringSettingsToFront, settingsPosition, 
+    handleDraggingInternal, handleDragEndInternal
+  ]);
 
   useEffect(() => {
     return () => {
@@ -189,12 +223,12 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
       />
       <DesktopClock />
       
-      <div className="relative z-10 grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-4 w-full">
+      <div className="relative z-10 grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-4 w-full pt-4 pl-4">
         {desktopItems.map((item) => (
           <DesktopIcon
             key={item.id}
             name={item.name}
-            icon={item.icon}
+            icon={item.icon === LinkIcon || typeof item.icon === 'string' ? LinkIcon : item.icon} // Handle string case for default mapping later
             onClick={() => handleDesktopItemClick(item)}
           />
         ))}
@@ -206,8 +240,23 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onClose={toggleFinderVisibility}
         onMinimize={toggleFinderVisibility} 
         onMaximize={() => console.log('Maximize Finder (not implemented)')}
-        onDragStart={handleDragStart}
+        onDragStart={(e) => handleWindowDragStart(e, 'finder')}
         zIndex={finderZIndex}
+      />
+      <SettingsWindow
+        isVisible={isSettingsVisible}
+        position={settingsPosition}
+        onClose={toggleSettingsVisibility}
+        onMinimize={toggleSettingsVisibility}
+        onMaximize={() => console.log('Maximize Settings (not implemented)')}
+        onDragStart={(e) => handleWindowDragStart(e, 'settings')}
+        zIndex={settingsZIndex}
+        // These will be passed from DesktopEnvironment down to SettingsWindow directly
+        // For now, placeholders or ensure DesktopEnvironment passes them
+        dockShortcuts={[]} 
+        desktopShortcuts={[]}
+        addShortcut={() => {}}
+        removeShortcut={() => {}}
       />
     </div>
   );
