@@ -100,7 +100,7 @@ interface DesktopAreaProps {
   desktopItems: AppDefinition[];
   dockShortcuts: UserShortcut[];
   desktopShortcuts: UserShortcut[];
-  addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
+  addShortcut: (type: 'dock' | 'desktop', name: string, url: string, iconUrl?: string) => void;
   removeShortcut: (type: 'dock' | 'desktop', id: string) => void;
 
   stickyNotes: StickyNoteState[];
@@ -309,7 +309,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
           <DesktopIcon
             key={item.id}
             name={item.name}
-            icon={item.icon === LinkIcon || typeof item.icon === 'string' ? LinkIcon : item.icon}
+            icon={item.icon} // Pass item.icon directly
             onClick={() => handleDesktopItemClick(item)}
           />
         ))}
@@ -373,7 +373,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
           onClose={onRemoveStickyNote}
           onDragStart={(e, id) => handleWindowDragStart(e, 'sticky', id)}
           onContentChange={onUpdateStickyNoteContent}
-          onPositionChange={onUpdateStickyNotePosition} // This is handled by drag logic via onUpdateStickyNotePosition
+          onPositionChange={onUpdateStickyNotePosition} 
           onSizeChange={onUpdateStickyNoteSize}
           onBringToFront={onBringStickyNoteToFront}
         />
@@ -383,3 +383,6 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
 };
 
 export default DesktopArea;
+
+
+    
