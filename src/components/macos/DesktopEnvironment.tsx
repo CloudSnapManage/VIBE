@@ -6,14 +6,16 @@ import MenuBar from './MenuBar';
 import DesktopArea from './DesktopArea';
 import Dock from './Dock';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import type { UserShortcut, AppDefinition } from '@/lib/types';
-import { FolderOpen, Settings, Search, Link as LinkIcon, FileText, Palette } from 'lucide-react';
+import type { UserShortcut, AppDefinition, StickyNoteState } from '@/lib/types';
+import { FolderOpen, Settings, Search, Link as LinkIcon, FileText, Palette, StickyNote as StickyNoteIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_FINDER_POS = { x: 20, y: 20 };
 const DEFAULT_SETTINGS_POS = { x: 70, y: 70 };
 const DEFAULT_NOTES_POS = { x: 120, y: 120 };
 const DEFAULT_WALLPAPER_SETTINGS_POS = { x: 170, y: 170 };
+const DEFAULT_STICKY_NOTE_POS = { x: 220, y: 50 };
+const DEFAULT_STICKY_NOTE_SIZE = { width: 200, height: 150 };
 const DEFAULT_Z_INDEX = 20;
 
 const DesktopEnvironment: React.FC = () => {
@@ -23,7 +25,7 @@ const DesktopEnvironment: React.FC = () => {
 
   const [isFinderVisible, setIsFinderVisible] = useState(true);
   const [finderPosition, setFinderPosition] = useLocalStorage('finderPosition', DEFAULT_FINDER_POS);
-  const [finderZIndex, setFinderZIndex] = useState(DEFAULT_Z_INDEX);
+  const [finderZIndex, setFinderZIndex] = useState(DEFAULT_Z_INDEX + 1);
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', DEFAULT_SETTINGS_POS);
@@ -40,13 +42,22 @@ const DesktopEnvironment: React.FC = () => {
   const [customWallpaperUrl, setCustomWallpaperUrl] = useLocalStorage<string | null>('customWallpaperUrl', null);
   const [customWallpaperDataUri, setCustomWallpaperDataUri] = useLocalStorage<string | null>('customWallpaperDataUri', null);
 
-  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX); 
+  const [stickyNotes, setStickyNotes] = useLocalStorage<StickyNoteState[]>('stickyNotes', []);
+  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX + 5); // Initial maxZIndex, accounts for default windows
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
 
   useEffect(() => {
     setIsClientHydrated(true);
+    // Initialize maxZIndex based on existing windows
+    let currentMax = DEFAULT_Z_INDEX;
+    if (isFinderVisible) currentMax = Math.max(currentMax, finderZIndex);
+    if (isSettingsVisible) currentMax = Math.max(currentMax, settingsZIndex);
+    if (isNotesVisible) currentMax = Math.max(currentMax, notesZIndex);
+    if (isWallpaperSettingsVisible) currentMax = Math.max(currentMax, wallpaperSettingsZIndex);
+    stickyNotes.forEach(note => currentMax = Math.max(currentMax, note.zIndex));
+    setMaxZIndex(currentMax);
   }, []);
 
   useEffect(() => {
@@ -71,6 +82,15 @@ const DesktopEnvironment: React.FC = () => {
   const bringSettingsToFront = useCallback(() => bringToFront(setSettingsZIndex), [bringToFront]);
   const bringNotesToFront = useCallback(() => bringToFront(setNotesZIndex), [bringToFront]);
   const bringWallpaperSettingsToFront = useCallback(() => bringToFront(setWallpaperSettingsZIndex), [bringToFront]);
+  
+  const bringStickyNoteToFront = useCallback((id: string) => {
+    setMaxZIndex(prevMax => {
+      const newZ = prevMax + 1;
+      setStickyNotes(notes => notes.map(note => note.id === id ? { ...note, zIndex: newZ } : note));
+      return newZ;
+    });
+  }, [setStickyNotes]);
+
 
   const toggleFinderVisibility = useCallback(() => {
     setIsFinderVisible(prev => {
@@ -125,6 +145,41 @@ const DesktopEnvironment: React.FC = () => {
     bringWallpaperSettingsToFront();
   }, [isWallpaperSettingsVisible, bringWallpaperSettingsToFront]);
 
+  const addStickyNote = useCallback(() => {
+    setMaxZIndex(prevMax => {
+      const newZ = prevMax + 1;
+      const newSticky: StickyNoteState = {
+        id: uuidv4(),
+        content: '',
+        position: { 
+          x: DEFAULT_STICKY_NOTE_POS.x + (stickyNotes.length % 5) * 20, // Cascade new notes slightly
+          y: DEFAULT_STICKY_NOTE_POS.y + (stickyNotes.length % 5) * 20
+        },
+        size: DEFAULT_STICKY_NOTE_SIZE,
+        zIndex: newZ,
+      };
+      setStickyNotes(prevNotes => [...prevNotes, newSticky]);
+      return newZ;
+    });
+  }, [stickyNotes.length, setStickyNotes]);
+
+  const updateStickyNoteContent = useCallback((id: string, content: string) => {
+    setStickyNotes(notes => notes.map(note => note.id === id ? { ...note, content } : note));
+  }, [setStickyNotes]);
+
+  const updateStickyNotePosition = useCallback((id: string, position: { x: number; y: number }) => {
+    setStickyNotes(notes => notes.map(note => note.id === id ? { ...note, position } : note));
+  }, [setStickyNotes]);
+
+  const updateStickyNoteSize = useCallback((id: string, size: { width: number; height: number }) => {
+    setStickyNotes(notes => notes.map(note => note.id === id ? { ...note, size } : note));
+  }, [setStickyNotes]);
+
+  const removeStickyNote = useCallback((id: string) => {
+    setStickyNotes(notes => notes.filter(note => note.id !== id));
+  }, [setStickyNotes]);
+
+
   const DEFAULT_FINDER_APP: AppDefinition = {
     id: 'finder-app',
     name: 'Finder',
@@ -165,12 +220,22 @@ const DesktopEnvironment: React.FC = () => {
     active: isWallpaperSettingsVisible,
   };
   
+  const ADD_STICKY_NOTE_APP: AppDefinition = {
+    id: 'add-sticky-note-app',
+    name: 'New Sticky Note',
+    icon: StickyNoteIcon,
+    type: 'app',
+    action: addStickyNote,
+    isDefault: true,
+    active: false, // This app doesn't have a persistent window state to be "active"
+  };
+
   const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
     id: 'search-desktop-icon',
     name: 'Search',
     icon: Search,
     type: 'app',
-    action: toggleFinderVisibility, // Re-using finder toggle for desktop search icon
+    action: toggleFinderVisibility,
     isDefault: true,
   };
 
@@ -192,7 +257,7 @@ const DesktopEnvironment: React.FC = () => {
     }
   }, [setUserDockShortcuts, setUserDesktopShortcuts]);
 
-  const userDockItems: AppDefinition[] = isClientHydrated 
+  const userDockItems: AppDefinition[] = (isClientHydrated && userDockShortcuts)
     ? userDockShortcuts.map(sc => ({
         id: sc.id,
         name: sc.name,
@@ -200,7 +265,7 @@ const DesktopEnvironment: React.FC = () => {
         type: 'url' as 'url',
         url: sc.url,
         isDefault: false,
-        active: false, // URL shortcuts don't have an "active" window state in this context
+        active: false, 
       }))
     : [];
 
@@ -209,12 +274,13 @@ const DesktopEnvironment: React.FC = () => {
     DEFAULT_SETTINGS_APP,
     DEFAULT_NOTES_APP,
     DEFAULT_WALLPAPER_SETTINGS_APP,
+    ADD_STICKY_NOTE_APP,
     ...userDockItems,
     { id: 'safari-default', name: 'Safari', icon: 'Globe2', type: 'url', url: 'https://www.apple.com/safari/', isDefault: true, active: false },
     { id: 'mail-default', name: 'Mail', icon: 'Mail', type: 'url', url: 'mailto:', isDefault: true, active: false },
   ];
 
-  const userDesktopItems: AppDefinition[] = isClientHydrated
+  const userDesktopItems: AppDefinition[] = (isClientHydrated && userDesktopShortcuts)
     ? userDesktopShortcuts.map(sc => ({
         id: sc.id,
         name: sc.name,
@@ -259,7 +325,7 @@ const DesktopEnvironment: React.FC = () => {
         notesPosition={isClientHydrated ? notesPosition : DEFAULT_NOTES_POS}
         setNotesPosition={setNotesPosition}
         notesZIndex={notesZIndex}
-        noteContent={noteContent} 
+        noteContent={isClientHydrated ? noteContent : ''} 
         setNoteContent={setNoteContent}
 
         isWallpaperSettingsVisible={isWallpaperSettingsVisible}
@@ -274,10 +340,17 @@ const DesktopEnvironment: React.FC = () => {
         setCustomWallpaperDataUri={setCustomWallpaperDataUri}
 
         desktopItems={combinedDesktopItems}
-        dockShortcuts={userDockShortcuts} 
-        desktopShortcuts={userDesktopShortcuts}
+        dockShortcuts={isClientHydrated ? userDockShortcuts : []} 
+        desktopShortcuts={isClientHydrated ? userDesktopShortcuts : []}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
+
+        stickyNotes={isClientHydrated ? stickyNotes : []}
+        onUpdateStickyNoteContent={updateStickyNoteContent}
+        onUpdateStickyNotePosition={updateStickyNotePosition}
+        onUpdateStickyNoteSize={updateStickyNoteSize}
+        onRemoveStickyNote={removeStickyNote}
+        onBringStickyNoteToFront={bringStickyNoteToFront}
       />
       <Dock items={combinedDockItems} />
     </div>

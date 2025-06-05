@@ -7,8 +7,9 @@ import FinderWindow from './FinderWindow';
 import SettingsWindow from './SettingsWindow';
 import NotesWindow from './NotesWindow'; 
 import WallpaperSettingsWindow from './WallpaperSettingsWindow'; 
+import StickyNoteWindow from './StickyNoteWindow';
 import DesktopIcon from './DesktopIcon';
-import type { AppDefinition, UserShortcut } from '@/lib/types';
+import type { AppDefinition, UserShortcut, StickyNoteState } from '@/lib/types';
 import { Link as LinkIcon } from 'lucide-react';
 
 
@@ -53,7 +54,8 @@ const DesktopClock: React.FC = () => {
 };
 
 interface WindowDragState {
-  id: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'; 
+  id: string; // Can be app ID like 'finder', 'settings', or a sticky note ID
+  type: 'app' | 'sticky';
   startPos: { x: number; y: number };
   windowStartPos: { x: number; y: number };
 }
@@ -95,12 +97,18 @@ interface DesktopAreaProps {
   customWallpaperDataUri: string | null;
   setCustomWallpaperDataUri: (dataUri: string | null) => void;
 
-
   desktopItems: AppDefinition[];
   dockShortcuts: UserShortcut[];
   desktopShortcuts: UserShortcut[];
   addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
   removeShortcut: (type: 'dock' | 'desktop', id: string) => void;
+
+  stickyNotes: StickyNoteState[];
+  onUpdateStickyNoteContent: (id: string, content: string) => void;
+  onUpdateStickyNotePosition: (id: string, position: { x: number; y: number }) => void;
+  onUpdateStickyNoteSize: (id: string, size: { width: number; height: number }) => void;
+  onRemoveStickyNote: (id: string) => void;
+  onBringStickyNoteToFront: (id: string) => void;
 }
 
 const DesktopArea: React.FC<DesktopAreaProps> = ({
@@ -110,6 +118,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
   isWallpaperSettingsVisible, toggleWallpaperSettingsVisibility, bringWallpaperSettingsToFront, wallpaperSettingsPosition, setWallpaperSettingsPosition, wallpaperSettingsZIndex, 
   customWallpaperUrl, setCustomWallpaperUrl, customWallpaperDataUri, setCustomWallpaperDataUri,
   desktopItems, dockShortcuts, desktopShortcuts, addShortcut, removeShortcut,
+  stickyNotes, onUpdateStickyNoteContent, onUpdateStickyNotePosition, onUpdateStickyNoteSize, onRemoveStickyNote, onBringStickyNoteToFront,
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
@@ -141,7 +150,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
       return;
     }
     
-    const { id, startPos, windowStartPos } = draggingWindowRef.current;
+    const { id, type, startPos, windowStartPos } = draggingWindowRef.current;
     const dx = latestMousePosition.current.clientX - startPos.x;
     const dy = latestMousePosition.current.clientY - startPos.y;
 
@@ -150,14 +159,17 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
       y: windowStartPos.y + dy,
     };
 
-    if (id === 'finder') setFinderPosition(newPosition);
-    else if (id === 'settings') setSettingsPosition(newPosition);
-    else if (id === 'notes') setNotesPosition(newPosition);
-    else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(newPosition);
-
+    if (type === 'app') {
+      if (id === 'finder') setFinderPosition(newPosition);
+      else if (id === 'settings') setSettingsPosition(newPosition);
+      else if (id === 'notes') setNotesPosition(newPosition);
+      else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(newPosition);
+    } else if (type === 'sticky') {
+      onUpdateStickyNotePosition(id, newPosition);
+    }
 
     animationFrameId.current = null; 
-  }, [setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition]);
+  }, [setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition, onUpdateStickyNotePosition]);
 
   const handleDraggingInternal = useCallback((event: MouseEvent) => {
     event.preventDefault();
@@ -178,51 +190,55 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     document.removeEventListener('mouseup', handleDragEndInternal);
 
     if (draggingWindowRef.current && latestMousePosition.current) {
-       const { id, startPos, windowStartPos } = draggingWindowRef.current;
+       const { id, type, startPos, windowStartPos } = draggingWindowRef.current;
        const dx = latestMousePosition.current.clientX - startPos.x;
        const dy = latestMousePosition.current.clientY - startPos.y;
        const finalPosition = {
           x: windowStartPos.x + dx,
           y: windowStartPos.y + dy,
        };
-       if (id === 'finder') setFinderPosition(finalPosition);
-       else if (id === 'settings') setSettingsPosition(finalPosition);
-       else if (id === 'notes') setNotesPosition(finalPosition);
-       else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(finalPosition);
+       if (type === 'app') {
+        if (id === 'finder') setFinderPosition(finalPosition);
+        else if (id === 'settings') setSettingsPosition(finalPosition);
+        else if (id === 'notes') setNotesPosition(finalPosition);
+        else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(finalPosition);
+       } else if (type === 'sticky') {
+        onUpdateStickyNotePosition(id, finalPosition);
+       }
     }
 
     draggingWindowRef.current = null;
     latestMousePosition.current = null;
-  }, [handleDraggingInternal, setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition]);
+  }, [handleDraggingInternal, setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition, onUpdateStickyNotePosition]);
 
   const handleWindowDragStart = useCallback((
     event: ReactMouseEvent<HTMLDivElement>, 
-    windowId: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'
+    windowType: 'app' | 'sticky',
+    windowId: string
   ) => {
     let currentPosition: {x: number; y: number};
-    switch(windowId) {
-      case 'finder':
-        bringFinderToFront();
-        currentPosition = finderPosition;
-        break;
-      case 'settings':
-        bringSettingsToFront();
-        currentPosition = settingsPosition;
-        break;
-      case 'notes':
-        bringNotesToFront();
-        currentPosition = notesPosition;
-        break;
-      case 'wallpaper-settings':
-        bringWallpaperSettingsToFront();
-        currentPosition = wallpaperSettingsPosition;
-        break;
-      default:
-        return; 
+
+    if (windowType === 'app') {
+      switch(windowId) {
+        case 'finder': bringFinderToFront(); currentPosition = finderPosition; break;
+        case 'settings': bringSettingsToFront(); currentPosition = settingsPosition; break;
+        case 'notes': bringNotesToFront(); currentPosition = notesPosition; break;
+        case 'wallpaper-settings': bringWallpaperSettingsToFront(); currentPosition = wallpaperSettingsPosition; break;
+        default: return; 
+      }
+    } else if (windowType === 'sticky') {
+      const stickyNote = stickyNotes.find(note => note.id === windowId);
+      if (!stickyNote) return;
+      onBringStickyNoteToFront(windowId);
+      currentPosition = stickyNote.position;
+    } else {
+      return;
     }
+
 
     draggingWindowRef.current = {
       id: windowId,
+      type: windowType,
       startPos: { x: event.clientX, y: event.clientY },
       windowStartPos: currentPosition,
     };
@@ -235,6 +251,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     bringSettingsToFront, settingsPosition, 
     bringNotesToFront, notesPosition,
     bringWallpaperSettingsToFront, wallpaperSettingsPosition,
+    stickyNotes, onBringStickyNoteToFront,
     handleDraggingInternal, handleDragEndInternal
   ]);
 
@@ -304,7 +321,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onClose={toggleFinderVisibility}
         onMinimize={toggleFinderVisibility} 
         onMaximize={() => console.log('Maximize Finder (not implemented)')}
-        onDragStart={(e) => handleWindowDragStart(e, 'finder')}
+        onDragStart={(e) => handleWindowDragStart(e, 'app', 'finder')}
         zIndex={finderZIndex}
       />
       <SettingsWindow
@@ -313,7 +330,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onClose={toggleSettingsVisibility}
         onMinimize={toggleSettingsVisibility}
         onMaximize={() => console.log('Maximize Settings (not implemented)')}
-        onDragStart={(e) => handleWindowDragStart(e, 'settings')}
+        onDragStart={(e) => handleWindowDragStart(e, 'app', 'settings')}
         zIndex={settingsZIndex}
         dockShortcuts={dockShortcuts} 
         desktopShortcuts={desktopShortcuts}
@@ -328,7 +345,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onClose={toggleNotesVisibility}
         onMinimize={toggleNotesVisibility}
         onMaximize={() => console.log('Maximize Notes (not implemented)')}
-        onDragStart={(e) => handleWindowDragStart(e, 'notes')}
+        onDragStart={(e) => handleWindowDragStart(e, 'app', 'notes')}
         zIndex={notesZIndex}
         noteContent={noteContent}
         setNoteContent={setNoteContent}
@@ -339,12 +356,28 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onClose={toggleWallpaperSettingsVisibility}
         onMinimize={toggleWallpaperSettingsVisibility}
         onMaximize={() => console.log('Maximize Wallpaper Settings (not implemented)')}
-        onDragStart={(e) => handleWindowDragStart(e, 'wallpaper-settings')}
+        onDragStart={(e) => handleWindowDragStart(e, 'app', 'wallpaper-settings')}
         zIndex={wallpaperSettingsZIndex}
         currentWallpaperUrl={customWallpaperUrl}
         setCustomWallpaperUrl={setCustomWallpaperUrl}
         setCustomWallpaperDataUri={setCustomWallpaperDataUri}
       />
+      {isClientHydrated && stickyNotes.map(note => (
+        <StickyNoteWindow
+          key={note.id}
+          id={note.id}
+          initialContent={note.content}
+          initialPosition={note.position}
+          initialSize={note.size}
+          zIndex={note.zIndex}
+          onClose={onRemoveStickyNote}
+          onDragStart={(e, id) => handleWindowDragStart(e, 'sticky', id)}
+          onContentChange={onUpdateStickyNoteContent}
+          onPositionChange={onUpdateStickyNotePosition} // This is handled by drag logic via onUpdateStickyNotePosition
+          onSizeChange={onUpdateStickyNoteSize}
+          onBringToFront={onBringStickyNoteToFront}
+        />
+      ))}
     </div>
   );
 };

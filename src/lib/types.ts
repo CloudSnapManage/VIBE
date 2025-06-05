@@ -16,7 +16,7 @@ export interface AppDefinition {
   action?: () => void; 
   url?: string; 
   isDefault?: boolean;
-  active?: boolean; // Added to indicate if the app's window is currently visible
+  active?: boolean;
 }
 
 export interface NoteData {
@@ -25,4 +25,13 @@ export interface NoteData {
 
 export interface WallpaperSettings {
   customUrl: string | null;
+  customDataUri: string | null;
+}
+
+export interface StickyNoteState {
+  id: string;
+  content: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  zIndex: number;
 }
