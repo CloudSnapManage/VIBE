@@ -55,8 +55,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ onToggleFinder }) => {
 
   return (
     <header 
-      className="h-[28px] bg-menubar-bg backdrop-blur-md text-menubar-fg text-sm font-medium
-                 flex items-center justify-between px-4 border-b border-border/50 shadow-sm shrink-0"
+      className="h-[28px] bg-transparent backdrop-blur-md text-menubar-fg text-sm font-medium
+                 flex items-center justify-between px-4 border-b border-border/50 shadow-sm shrink-0 relative z-30"
       aria-label="Application Menu Bar"
     >
       <div className="flex items-center gap-3">

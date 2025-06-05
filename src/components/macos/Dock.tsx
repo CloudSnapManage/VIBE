@@ -20,10 +20,10 @@ const Dock: React.FC<DockProps> = ({ items }) => {
 
   return (
     <footer 
-      className="h-[72px] w-full flex justify-center items-center p-2 shrink-0"
+      className="h-[72px] w-full flex justify-center items-center p-2 shrink-0 bg-transparent relative z-30"
       aria-label="Application Dock"
     >
-      <div className="bg-dock-bg backdrop-blur-lg shadow-dock rounded-xl p-2 flex items-end space-x-2 h-[60px]">
+      <div className="bg-transparent backdrop-blur-lg shadow-dock rounded-xl p-2 flex items-end space-x-2 h-[60px]">
         {items.map((item, index) => {
           const IconComponent = getIconComponent(item.icon);
           return (
