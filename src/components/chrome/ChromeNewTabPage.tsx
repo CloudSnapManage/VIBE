@@ -20,22 +20,22 @@ const shortcuts = [
 
 const ChromeNewTabPage: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 selection:bg-primary/20 selection:text-primary-foreground">
-      <Image 
-        src="https://placehold.co/272x92.png" 
-        alt="Site Logo" 
-        width={272} 
-        height={92} 
-        className="mb-10" 
-        data-ai-hint="google logo" 
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 sm:p-8 selection:bg-primary/20 selection:text-primary-foreground">
+      <Image
+        src="https://placehold.co/272x92.png"
+        alt="Site Logo"
+        width={272}
+        height={92}
+        className="mb-6 sm:mb-10"
+        data-ai-hint="google logo"
         priority
       />
 
-      <div className="w-full max-w-xl mb-16">
+      <div className="w-full max-w-lg sm:max-w-xl mb-10 sm:mb-16 px-2 sm:px-0">
         <WebSearch />
       </div>
 
-      <div className="grid grid-cols-4 gap-x-6 gap-y-6 w-full max-w-2xl">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-x-6 sm:gap-y-6 w-full max-w-xs sm:max-w-2xl">
         {shortcuts.map((shortcut) => (
           <a
             key={shortcut.name}
@@ -46,9 +46,9 @@ const ChromeNewTabPage: React.FC = () => {
             aria-label={`Open ${shortcut.name}`}
           >
             <Card className="hover:shadow-md transition-shadow duration-200 ease-in-out bg-card border-border/80 group-hover:border-primary/50">
-              <CardContent className="flex flex-col items-center justify-center p-4 aspect-[4/3]">
-                <div className="p-3 mb-2 bg-muted/70 rounded-full group-hover:bg-accent/20 transition-colors duration-200 ease-in-out">
-                  <shortcut.icon size={28} className="text-foreground/60 group-hover:text-accent-foreground transition-colors duration-200 ease-in-out" />
+              <CardContent className="flex flex-col items-center justify-center p-3 sm:p-4 aspect-[4/3]">
+                <div className="p-2 sm:p-3 mb-1.5 sm:mb-2 bg-muted/70 rounded-full group-hover:bg-accent/20 transition-colors duration-200 ease-in-out">
+                  <shortcut.icon size={24} className="sm:size-28 text-foreground/60 group-hover:text-accent-foreground transition-colors duration-200 ease-in-out" />
                 </div>
                 <p className="text-xs text-center text-foreground/90 truncate w-full group-hover:text-foreground transition-colors duration-200 ease-in-out">{shortcut.name}</p>
               </CardContent>

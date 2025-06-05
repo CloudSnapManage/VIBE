@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { type MouseEvent as ReactMouseEvent } from 'react';
+import React, { type MouseEvent as ReactMouseEvent, useState, useEffect } from 'react';
 import TrafficLights from './TrafficLights';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText } from 'lucide-react';
@@ -29,23 +29,38 @@ const NotesWindow: React.FC<NotesWindowProps> = ({
   noteContent,
   setNoteContent,
 }) => {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   if (!isVisible) {
     return null;
   }
 
+  const desktopStyle: React.CSSProperties = {
+    transform: `translate(${position.x}px, ${position.y}px)`,
+    left: '50%', 
+    top: '50%',
+    marginLeft: '-14rem', // Half of max-w-md (28rem / 2)
+    marginTop: '-175px', // Half of h-[350px]
+    zIndex,
+    cursor: 'default',
+  };
+
+  const mobileStyle: React.CSSProperties = {
+    zIndex,
+    cursor: 'default',
+  };
+
+  const currentStyle = isMounted && window.innerWidth >= 768 ? desktopStyle : mobileStyle;
+
   return (
     <div
-      className="w-full max-w-md h-[350px] bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden
-                 border border-black/10 absolute"
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`,
-        left: '50%', 
-        top: '50%',
-        marginLeft: '-14rem', // Half of max-w-md (28rem / 2)
-        marginTop: '-175px', // Half of h-[350px]
-        zIndex,
-        cursor: 'default',
-      }}
+      className="bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden border border-black/10
+                 fixed inset-x-2 top-[calc(28px+0.5rem)] bottom-[calc(72px+0.5rem)] 
+                 md:absolute md:w-full md:max-w-md md:h-[350px] md:inset-auto"
+      style={currentStyle}
       role="dialog"
       aria-labelledby="notes-window-title"
       onClick={(e) => e.stopPropagation()}
@@ -59,7 +74,7 @@ const NotesWindow: React.FC<NotesWindowProps> = ({
           <FileText size={16} className="mr-1.5 text-primary" />
           <span id="notes-window-title">Notes</span>
         </div>
-        <div className="w-14"></div> {/* Spacer for traffic lights */}
+        <div className="w-14"></div> 
       </header>
       <main className="flex-grow p-1 bg-background flex">
         <Textarea

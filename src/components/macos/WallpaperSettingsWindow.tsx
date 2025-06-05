@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, type FormEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import React, { useState, type FormEvent, type MouseEvent as ReactMouseEvent, useEffect } from 'react';
 import TrafficLights from './TrafficLights';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ interface WallpaperSettingsWindowProps {
   zIndex: number;
   currentWallpaperUrl: string | null;
   setCustomWallpaperUrl: (url: string | null) => void;
-  setCustomWallpaperDataUri: (dataUri: string | null) => void; // New prop
+  setCustomWallpaperDataUri: (dataUri: string | null) => void;
 }
 
 const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
@@ -36,6 +36,16 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
 }) => {
   const [inputUrl, setInputUrl] = useState(currentWallpaperUrl || '');
   const { toast } = useToast();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  useEffect(() => {
+    setInputUrl(currentWallpaperUrl || '');
+  }, [currentWallpaperUrl]);
+
 
   if (!isVisible) {
     return null;
@@ -45,23 +55,19 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
     e.preventDefault();
     const urlToSet = inputUrl.trim();
     
-    setCustomWallpaperDataUri(null); // Clear any existing Data URI first
-    setCustomWallpaperUrl(null); // Clear existing URL to ensure UI updates if fetch fails
+    setCustomWallpaperDataUri(null); 
+    setCustomWallpaperUrl(null); 
 
     if (urlToSet) {
       try {
-        new URL(urlToSet); // Basic URL validation
-        setCustomWallpaperUrl(urlToSet); // Set URL optimistically for next/image fallback
+        new URL(urlToSet); 
+        setCustomWallpaperUrl(urlToSet); 
 
-        // Attempt to fetch and store as Data URI
         const response = await fetch(urlToSet);
         if (!response.ok) {
           throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
         }
         const blob = await response.blob();
-
-        // Optional: Check blob size here if desired, before converting
-        // For example: if (blob.size > 5 * 1024 * 1024) { /* 5MB limit */ ... }
         
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -71,7 +77,7 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
             toast({ title: "Wallpaper Set", description: "Custom wallpaper applied and cached locally." });
           } catch (storageError) {
             console.warn("Failed to store wallpaper Data URI in localStorage (likely too large):", storageError);
-            setCustomWallpaperDataUri(null); // Ensure it's cleared if storage fails
+            setCustomWallpaperDataUri(null); 
             toast({ 
               title: "Wallpaper Set (URL only)", 
               description: "Custom wallpaper applied. Could not cache locally (image might be too large).",
@@ -82,13 +88,12 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
         reader.onerror = () => {
           console.warn('Failed to read image as Data URI.');
           toast({ title: "Error", description: "Could not process image for local caching.", variant: "destructive" });
-          // customWallpaperUrl is already set, so it will be used by next/image
         };
         reader.readAsDataURL(blob);
 
       } catch (error) {
         console.warn('Error setting custom wallpaper:', error);
-        setCustomWallpaperUrl(urlToSet); // Still set the URL for next/image to try
+        setCustomWallpaperUrl(urlToSet); 
         toast({ 
           title: "Invalid URL or Fetch Error", 
           description: `Could not set wallpaper. Using URL directly. Error: ${(error as Error).message}`, 
@@ -96,7 +101,6 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
         });
       }
     } else {
-      // Clearing wallpaper
       setCustomWallpaperUrl(null);
       setCustomWallpaperDataUri(null);
       toast({ title: "Wallpaper Cleared", description: "Reverted to default dynamic wallpapers." });
@@ -110,20 +114,30 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
     toast({ title: "Wallpaper Cleared", description: "Reverted to default dynamic wallpapers." });
   };
 
+  const desktopStyle: React.CSSProperties = {
+    transform: `translate(${position.x}px, ${position.y}px)`,
+    left: '50%',
+    top: '50%',
+    marginLeft: '-16rem', // Half of max-w-lg (32rem)
+    marginTop: '-110px', // Half of min-h '220px' approx, or based on its content actual height
+    zIndex,
+    cursor: 'default',
+  };
+  
+  const mobileStyle: React.CSSProperties = {
+    zIndex,
+    cursor: 'default',
+  };
+
+  const currentStyle = isMounted && window.innerWidth >= 768 ? desktopStyle : mobileStyle;
+
+
   return (
     <div
-      className="w-full max-w-lg h-auto bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden
-                 border border-black/10 absolute" // Changed height to auto
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`,
-        left: '50%',
-        top: '50%',
-        marginLeft: '-16rem', 
-        marginTop: '-100px', // Adjusted for potentially smaller height
-        zIndex,
-        cursor: 'default',
-        minHeight: '220px', // Ensure a minimum height
-      }}
+      className="bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden border border-black/10
+                 fixed inset-x-2 top-[calc(28px+0.5rem)] bottom-auto 
+                 md:absolute md:w-full md:max-w-lg md:h-auto md:min-h-[220px] md:inset-auto"
+      style={currentStyle}
       role="dialog"
       aria-labelledby="wallpaper-settings-window-title"
       onClick={(e) => e.stopPropagation()}
@@ -139,7 +153,7 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
         </div>
         <div className="w-14"></div> 
       </header>
-      <main className="flex-grow p-6 bg-background flex flex-col justify-center">
+      <main className="flex-grow p-4 sm:p-6 bg-background flex flex-col justify-center">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="wallpaper-url-input" className="block text-sm font-medium text-foreground mb-1">
@@ -151,16 +165,16 @@ const WallpaperSettingsWindow: React.FC<WallpaperSettingsWindowProps> = ({
               placeholder="https://example.com/your-image.png"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              className="h-10"
+              className="h-10 text-sm"
               aria-label="Custom wallpaper URL"
             />
-             <p className="text-xs text-muted-foreground mt-1">Leave empty or clear to use dynamic time-based wallpapers.</p>
+             <p className="text-xs text-muted-foreground mt-1">Leave empty or clear to use dynamic wallpapers.</p>
           </div>
-          <div className="flex space-x-2">
-            <Button type="submit" className="flex-grow">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <Button type="submit" className="flex-grow text-sm">
               Set Wallpaper
             </Button>
-            <Button type="button" variant="outline" onClick={handleClear} className="flex-grow">
+            <Button type="button" variant="outline" onClick={handleClear} className="flex-grow text-sm">
               Clear & Use Default
             </Button>
           </div>
