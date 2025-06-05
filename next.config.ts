@@ -25,7 +25,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.skyweaver.ns', // Added this new pattern for the problematic URL
+        hostname: 'www.skyweaver.ns',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images2.alphacoders.com',
         port: '',
         pathname: '/**',
       },
