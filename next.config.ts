@@ -19,7 +19,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.skyweaver.net', // Added this new pattern
+        hostname: 'www.skyweaver.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.skyweaver.ns', // Added this new pattern for the problematic URL
         port: '',
         pathname: '/**',
       },
