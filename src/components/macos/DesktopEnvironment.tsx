@@ -242,7 +242,7 @@ const DesktopEnvironment: React.FC = () => {
         notesPosition={isClientHydrated ? notesPosition : DEFAULT_NOTES_POS}
         setNotesPosition={setNotesPosition}
         notesZIndex={notesZIndex}
-        noteContent={noteContent} /* noteContent comes from localStorage but is text, less likely for hydration with Textarea */
+        noteContent={noteContent} 
         setNoteContent={setNoteContent}
 
         isWallpaperSettingsVisible={isWallpaperSettingsVisible}
@@ -251,7 +251,7 @@ const DesktopEnvironment: React.FC = () => {
         wallpaperSettingsPosition={isClientHydrated ? wallpaperSettingsPosition : DEFAULT_WALLPAPER_SETTINGS_POS}
         setWallpaperSettingsPosition={setWallpaperSettingsPosition}
         wallpaperSettingsZIndex={wallpaperSettingsZIndex}
-        customWallpaperUrl={customWallpaperUrl} /* customWallpaperUrl affects an Image src, also handled by isClientHydrated logic if needed in DesktopArea */
+        customWallpaperUrl={isClientHydrated ? customWallpaperUrl : null}
         setCustomWallpaperUrl={setCustomWallpaperUrl}
 
         desktopItems={combinedDesktopItems}
