@@ -3,7 +3,7 @@
 
 import React from 'react';
 import TrafficLights from './TrafficLights';
-import WebSearch from '@/components/shared/WebSearch'; // Updated import path
+import WebSearch from '@/components/macos/WebSearch'; // Reverted import path
 import { Folder } from 'lucide-react';
 
 const FinderWindow: React.FC = () => {

@@ -1,10 +1,10 @@
 
-import ChromeNewTabPage from '@/components/chrome/ChromeNewTabPage';
+import DesktopEnvironment from '@/components/macos/DesktopEnvironment';
 
 export default function Home() {
   return (
     <main className="h-full w-full">
-      <ChromeNewTabPage />
+      <DesktopEnvironment />
     </main>
   );
 }
