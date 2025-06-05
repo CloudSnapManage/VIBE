@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -100,5 +101,44 @@ body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Styles for animated search input border */
+@layer utilities {
+  .search-input-outer-wrapper {
+    @apply p-px rounded-md transition-all duration-300 ease-out;
+    background: hsl(var(--input)); /* Default border color (matches input bg) */
+  }
+
+  .search-input-outer-wrapper.is-focused-wrapper {
+    /* On focus, the background becomes an animated gradient */
+    /* Using theme's primary and accent for a vibrant, RGB-like feel */
+    background: linear-gradient(90deg,
+      hsl(var(--primary) / 0.8),
+      hsl(var(--accent) / 0.9),
+      hsl(var(--primary) / 0.7),
+      hsl(var(--accent) / 0.8),
+      hsl(var(--primary) / 0.9)
+    );
+    background-size: 300% 100%; /* Make gradient wider to allow for sliding effect */
+    /* Apply the animation defined in tailwind.config.ts */
+    animation: focus-shine 2s linear infinite;
+  }
+
+  /* The actual input field within the animated wrapper */
+  .search-input-field-animated {
+    @apply bg-background w-full h-full;
+    /* Rounded corners slightly less than the wrapper to create the border effect */
+    border-radius: calc(var(--radius) - 1px);
+    /* Remove default browser focus outline/ring as we use a custom one */
+    outline: none !important;
+    box-shadow: none !important;
+    /* Ensure default Shadcn input border is transparent or overridden */
+    border: 1px solid transparent !important;
+  }
+   /* Ensure the input's border doesn't interfere when focused */
+  .search-input-outer-wrapper.is-focused-wrapper .search-input-field-animated {
+     border: 1px solid transparent !important;
   }
 }
