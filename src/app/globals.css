@@ -113,17 +113,19 @@ body {
 
   .search-input-outer-wrapper.is-focused-wrapper {
     /* On focus, the background becomes an animated gradient */
-    /* Using theme's primary and accent for a vibrant, RGB-like feel */
-    background: linear-gradient(90deg,
-      hsl(var(--primary) / 0.8),
-      hsl(var(--accent) / 0.9),
-      hsl(var(--primary) / 0.7),
-      hsl(var(--accent) / 0.8),
-      hsl(var(--primary) / 0.9)
+    background: linear-gradient(
+      90deg,
+      hsl(315, 70%, 65%), /* Pink/Magenta */
+      hsl(25, 85%, 60%),  /* Orange */
+      hsl(55, 85%, 55%),  /* Yellow */
+      hsl(135, 70%, 60%), /* Bright Green */
+      hsl(195, 75%, 60%), /* Cyan/Sky Blue */
+      hsl(260, 70%, 70%), /* Purple/Violet */
+      hsl(315, 70%, 65%)  /* Loop back to Pink/Magenta for smooth repeat */
     );
     background-size: 300% 100%; /* Make gradient wider to allow for sliding effect */
     /* Apply the animation defined in tailwind.config.ts */
-    animation: focus-shine 2s linear infinite;
+    animation: focus-shine 3s linear infinite; /* Adjusted duration */
   }
 
   /* The actual input field within the animated wrapper */
@@ -142,3 +144,4 @@ body {
      border: 1px solid transparent !important;
   }
 }
+

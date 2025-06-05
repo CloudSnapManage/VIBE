@@ -108,17 +108,16 @@ export default {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
-        'focus-shine': { // New keyframe for the search input border animation
-          '0%': { 'background-position': '200% center' },
-          '50%': { 'background-position': '-200% center' }, // Adjusted to go left then reset
-          '100%': { 'background-position': '200% center' },
+        'focus-shine': { // Updated keyframes for continuous LTR slide
+          '0%': { 'background-position': '0% center' },
+          '100%': { 'background-position': '300% center' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'window-open': 'window-open 0.2s ease-out forwards',
-        'focus-shine': 'focus-shine 2s linear infinite', // New animation
+        'focus-shine': 'focus-shine 3s linear infinite', // Adjusted duration
       },
     },
   },
