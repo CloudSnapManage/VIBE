@@ -43,14 +43,13 @@ const DesktopEnvironment: React.FC = () => {
   const [customWallpaperDataUri, setCustomWallpaperDataUri] = useLocalStorage<string | null>('customWallpaperDataUri', null);
 
   const [stickyNotes, setStickyNotes] = useLocalStorage<StickyNoteState[]>('stickyNotes', []);
-  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX + 5); // Initial maxZIndex, accounts for default windows
+  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX + 5); 
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
 
   useEffect(() => {
     setIsClientHydrated(true);
-    // Initialize maxZIndex based on existing windows
     let currentMax = DEFAULT_Z_INDEX;
     if (isFinderVisible) currentMax = Math.max(currentMax, finderZIndex);
     if (isSettingsVisible) currentMax = Math.max(currentMax, settingsZIndex);
@@ -58,7 +57,8 @@ const DesktopEnvironment: React.FC = () => {
     if (isWallpaperSettingsVisible) currentMax = Math.max(currentMax, wallpaperSettingsZIndex);
     stickyNotes.forEach(note => currentMax = Math.max(currentMax, note.zIndex));
     setMaxZIndex(currentMax);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Initialize maxZIndex once on mount based on potentially loaded states
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -146,22 +146,27 @@ const DesktopEnvironment: React.FC = () => {
   }, [isWallpaperSettingsVisible, bringWallpaperSettingsToFront]);
 
   const addStickyNote = useCallback(() => {
-    setMaxZIndex(prevMax => {
-      const newZ = prevMax + 1;
-      const newSticky: StickyNoteState = {
-        id: uuidv4(),
-        content: '',
-        position: { 
-          x: DEFAULT_STICKY_NOTE_POS.x + (stickyNotes.length % 5) * 20, // Cascade new notes slightly
-          y: DEFAULT_STICKY_NOTE_POS.y + (stickyNotes.length % 5) * 20
-        },
-        size: DEFAULT_STICKY_NOTE_SIZE,
-        zIndex: newZ,
+    const newNoteId = uuidv4();
+    const newZValue = maxZIndex + 1; 
+
+    const newStickyBase: Omit<StickyNoteState, 'position'> = { // Position will be set in the updater
+      id: newNoteId,
+      content: '',
+      size: DEFAULT_STICKY_NOTE_SIZE,
+      zIndex: newZValue,
+    };
+
+    setStickyNotes(prevNotes => {
+      const cascadedPosition = {
+        x: DEFAULT_STICKY_NOTE_POS.x + (prevNotes.length % 5) * 20,
+        y: DEFAULT_STICKY_NOTE_POS.y + (prevNotes.length % 5) * 20,
       };
-      setStickyNotes(prevNotes => [...prevNotes, newSticky]);
-      return newZ;
+      return [...prevNotes, { ...newStickyBase, position: cascadedPosition }];
     });
-  }, [stickyNotes.length, setStickyNotes]);
+
+    setMaxZIndex(newZValue);
+  }, [maxZIndex, setStickyNotes, setMaxZIndex]);
+
 
   const updateStickyNoteContent = useCallback((id: string, content: string) => {
     setStickyNotes(notes => notes.map(note => note.id === id ? { ...note, content } : note));
@@ -227,7 +232,7 @@ const DesktopEnvironment: React.FC = () => {
     type: 'app',
     action: addStickyNote,
     isDefault: true,
-    active: false, // This app doesn't have a persistent window state to be "active"
+    active: false, 
   };
 
   const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
@@ -358,3 +363,4 @@ const DesktopEnvironment: React.FC = () => {
 };
 
 export default DesktopEnvironment;
+
