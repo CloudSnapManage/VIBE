@@ -17,3 +17,13 @@ export interface AppDefinition {
   url?: string; // For 'url' type
   isDefault?: boolean; // To differentiate default apps from user-added ones
 }
+
+// Simple type for a single note for now
+export interface NoteData {
+  content: string;
+}
+
+// Type for custom wallpaper setting
+export interface WallpaperSettings {
+  customUrl: string | null;
+}

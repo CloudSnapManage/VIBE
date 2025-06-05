@@ -7,7 +7,7 @@ import DesktopArea from './DesktopArea';
 import Dock from './Dock';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import type { UserShortcut, AppDefinition } from '@/lib/types';
-import { FolderOpen, Settings, Search, Link as LinkIcon } from 'lucide-react';
+import { FolderOpen, Settings, Search, Link as LinkIcon, FileText, Palette } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_FINDER_APP: AppDefinition = {
@@ -22,6 +22,22 @@ const DEFAULT_SETTINGS_APP: AppDefinition = {
   id: 'settings-app',
   name: 'System Settings',
   icon: Settings,
+  type: 'app',
+  isDefault: true,
+};
+
+const DEFAULT_NOTES_APP: AppDefinition = {
+  id: 'notes-app',
+  name: 'Notes',
+  icon: FileText,
+  type: 'app',
+  isDefault: true,
+};
+
+const DEFAULT_WALLPAPER_SETTINGS_APP: AppDefinition = {
+  id: 'wallpaper-settings-app',
+  name: 'Wallpaper Settings',
+  icon: Palette,
   type: 'app',
   isDefault: true,
 };
@@ -46,18 +62,23 @@ const DesktopEnvironment: React.FC = () => {
   const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', { x: 70, y: 70 });
   const [settingsZIndex, setSettingsZIndex] = useState(20);
   
-  const [maxZIndex, setMaxZIndex] = useState(20);
+  const [isNotesVisible, setIsNotesVisible] = useState(false);
+  const [notesPosition, setNotesPosition] = useLocalStorage('notesPosition', { x: 120, y: 120 });
+  const [notesZIndex, setNotesZIndex] = useState(20);
+  const [noteContent, setNoteContent] = useLocalStorage('noteContent', '');
+
+  const [isWallpaperSettingsVisible, setIsWallpaperSettingsVisible] = useState(false);
+  const [wallpaperSettingsPosition, setWallpaperSettingsPosition] = useLocalStorage('wallpaperSettingsPosition', { x: 170, y: 170 });
+  const [wallpaperSettingsZIndex, setWallpaperSettingsZIndex] = useState(20);
+  const [customWallpaperUrl, setCustomWallpaperUrl] = useLocalStorage<string | null>('customWallpaperUrl', null);
+
+  const [maxZIndex, setMaxZIndex] = useState(20); // Initial base z-index
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
 
   useEffect(() => {
     setIsClientHydrated(true);
-    // Initialize positions if this is the first load and localStorage is empty
-    // This ensures windows are somewhat centered initially rather than 0,0 if localStorage was never set.
-    // However, useLocalStorage already handles initial values.
-    // So this block might be redundant if initial values for useLocalStorage are sufficient.
-    // For now, let's assume initial values are fine.
   }, []);
 
   const bringToFront = useCallback((setter: React.Dispatch<React.SetStateAction<number>>) => {
@@ -70,6 +91,8 @@ const DesktopEnvironment: React.FC = () => {
 
   const bringFinderToFront = useCallback(() => bringToFront(setFinderZIndex), [bringToFront]);
   const bringSettingsToFront = useCallback(() => bringToFront(setSettingsZIndex), [bringToFront]);
+  const bringNotesToFront = useCallback(() => bringToFront(setNotesZIndex), [bringToFront]);
+  const bringWallpaperSettingsToFront = useCallback(() => bringToFront(setWallpaperSettingsZIndex), [bringToFront]);
 
   const toggleFinderVisibility = useCallback(() => {
     setIsFinderVisible(prev => {
@@ -87,6 +110,23 @@ const DesktopEnvironment: React.FC = () => {
     });
   }, [bringSettingsToFront]);
 
+  const toggleNotesVisibility = useCallback(() => {
+    setIsNotesVisible(prev => {
+      const newVisibility = !prev;
+      if (newVisibility) bringNotesToFront();
+      return newVisibility;
+    });
+  }, [bringNotesToFront]);
+
+  const toggleWallpaperSettingsVisibility = useCallback(() => {
+    setIsWallpaperSettingsVisible(prev => {
+      const newVisibility = !prev;
+      if (newVisibility) bringWallpaperSettingsToFront();
+      return newVisibility;
+    });
+  }, [bringWallpaperSettingsToFront]);
+
+
   const handleDockFinderClick = useCallback(() => {
     if (!isFinderVisible) setIsFinderVisible(true);
     bringFinderToFront();
@@ -96,9 +136,22 @@ const DesktopEnvironment: React.FC = () => {
     if (!isSettingsVisible) setIsSettingsVisible(true);
     bringSettingsToFront();
   }, [isSettingsVisible, bringSettingsToFront]);
+  
+  const handleDockNotesClick = useCallback(() => {
+    if (!isNotesVisible) setIsNotesVisible(true);
+    bringNotesToFront();
+  }, [isNotesVisible, bringNotesToFront]);
+
+  const handleDockWallpaperSettingsClick = useCallback(() => {
+    if (!isWallpaperSettingsVisible) setIsWallpaperSettingsVisible(true);
+    bringWallpaperSettingsToFront();
+  }, [isWallpaperSettingsVisible, bringWallpaperSettingsToFront]);
+
 
   DEFAULT_FINDER_APP.action = handleDockFinderClick;
   DEFAULT_SETTINGS_APP.action = handleDockSettingsClick;
+  DEFAULT_NOTES_APP.action = handleDockNotesClick;
+  DEFAULT_WALLPAPER_SETTINGS_APP.action = handleDockWallpaperSettingsClick;
   DEFAULT_SEARCH_DESKTOP_ICON.action = toggleFinderVisibility;
 
 
@@ -133,6 +186,8 @@ const DesktopEnvironment: React.FC = () => {
   const combinedDockItems: AppDefinition[] = [
     DEFAULT_FINDER_APP,
     DEFAULT_SETTINGS_APP,
+    DEFAULT_NOTES_APP,
+    DEFAULT_WALLPAPER_SETTINGS_APP,
     ...userDockItems,
     { id: 'safari-default', name: 'Safari', icon: 'Globe2', type: 'url', url: 'https://www.apple.com/safari/', isDefault: true },
     { id: 'mail-default', name: 'Mail', icon: 'Mail', type: 'url', url: 'mailto:', isDefault: true },
@@ -167,12 +222,32 @@ const DesktopEnvironment: React.FC = () => {
         finderPosition={finderPosition}
         setFinderPosition={setFinderPosition}
         finderZIndex={finderZIndex}
+
         isSettingsVisible={isSettingsVisible}
         toggleSettingsVisibility={toggleSettingsVisibility}
         bringSettingsToFront={bringSettingsToFront}
         settingsPosition={settingsPosition}
         setSettingsPosition={setSettingsPosition}
         settingsZIndex={settingsZIndex}
+        
+        isNotesVisible={isNotesVisible}
+        toggleNotesVisibility={toggleNotesVisibility}
+        bringNotesToFront={bringNotesToFront}
+        notesPosition={notesPosition}
+        setNotesPosition={setNotesPosition}
+        notesZIndex={notesZIndex}
+        noteContent={noteContent}
+        setNoteContent={setNoteContent}
+
+        isWallpaperSettingsVisible={isWallpaperSettingsVisible}
+        toggleWallpaperSettingsVisibility={toggleWallpaperSettingsVisibility}
+        bringWallpaperSettingsToFront={bringWallpaperSettingsToFront}
+        wallpaperSettingsPosition={wallpaperSettingsPosition}
+        setWallpaperSettingsPosition={setWallpaperSettingsPosition}
+        wallpaperSettingsZIndex={wallpaperSettingsZIndex}
+        customWallpaperUrl={customWallpaperUrl}
+        setCustomWallpaperUrl={setCustomWallpaperUrl}
+
         desktopItems={combinedDesktopItems}
         dockShortcuts={userDockShortcuts} 
         desktopShortcuts={userDesktopShortcuts}

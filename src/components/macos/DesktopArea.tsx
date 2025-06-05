@@ -4,20 +4,22 @@
 import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent, useCallback } from 'react';
 import Image from 'next/image';
 import FinderWindow from './FinderWindow';
-import SettingsWindow from './SettingsWindow'; // Import SettingsWindow
+import SettingsWindow from './SettingsWindow';
+import NotesWindow from './NotesWindow'; // Import NotesWindow
+import WallpaperSettingsWindow from './WallpaperSettingsWindow'; // Import WallpaperSettingsWindow
 import DesktopIcon from './DesktopIcon';
 import type { AppDefinition, UserShortcut } from '@/lib/types';
 import { Link as LinkIcon } from 'lucide-react';
 
 
-const wallpapers = {
+const defaultWallpapers = {
   morning: { src: 'https://placehold.co/1920x1080.png', hint: 'sunrise mountain' },
   day: { src: 'https://placehold.co/1920x1080.png', hint: 'daylight valley' },
   evening: { src: 'https://placehold.co/1920x1080.png', hint: 'sunset beach' },
   night: { src: 'https://placehold.co/1920x1080.png', hint: 'night sky stars' },
 };
 
-type TimeOfDay = keyof typeof wallpapers;
+type TimeOfDay = keyof typeof defaultWallpapers;
 
 const getTimeOfDay = (): TimeOfDay => {
   const hour = new Date().getHours();
@@ -31,15 +33,13 @@ const DesktopClock: React.FC = () => {
   const [timeString, setTimeString] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect runs only on the client after hydration
     const update = () => setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    update(); // Initial set on client
-    const timerId = setInterval(update, 1000 * 60); // Update every minute for display
+    update(); 
+    const timerId = setInterval(update, 1000 * 60); 
     return () => clearInterval(timerId);
-  }, []); // Empty dependency array ensures this runs once on mount (client-side)
+  }, []); 
 
   if (timeString === null) {
-    // Render nothing or a placeholder on the server and during initial client render
     return null; 
   }
 
@@ -53,7 +53,7 @@ const DesktopClock: React.FC = () => {
 };
 
 interface WindowDragState {
-  id: 'finder' | 'settings';
+  id: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'; // Added new window IDs
   startPos: { x: number; y: number };
   windowStartPos: { x: number; y: number };
 }
@@ -73,9 +73,25 @@ interface DesktopAreaProps {
   setSettingsPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
   settingsZIndex: number;
   
-  desktopItems: AppDefinition[];
+  isNotesVisible: boolean;
+  toggleNotesVisibility: () => void;
+  bringNotesToFront: () => void;
+  notesPosition: { x: number; y: number };
+  setNotesPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
+  notesZIndex: number;
+  noteContent: string;
+  setNoteContent: (content: string) => void;
 
-  // Props for SettingsWindow customization
+  isWallpaperSettingsVisible: boolean;
+  toggleWallpaperSettingsVisibility: () => void;
+  bringWallpaperSettingsToFront: () => void;
+  wallpaperSettingsPosition: { x: number; y: number };
+  setWallpaperSettingsPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
+  wallpaperSettingsZIndex: number;
+  customWallpaperUrl: string | null;
+  setCustomWallpaperUrl: (url: string | null) => void;
+
+  desktopItems: AppDefinition[];
   dockShortcuts: UserShortcut[];
   desktopShortcuts: UserShortcut[];
   addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
@@ -83,23 +99,11 @@ interface DesktopAreaProps {
 }
 
 const DesktopArea: React.FC<DesktopAreaProps> = ({
-  isFinderVisible,
-  toggleFinderVisibility,
-  bringFinderToFront,
-  finderPosition,
-  setFinderPosition,
-  finderZIndex,
-  isSettingsVisible,
-  toggleSettingsVisibility,
-  bringSettingsToFront,
-  settingsPosition,
-  setSettingsPosition,
-  settingsZIndex,
-  desktopItems,
-  dockShortcuts,
-  desktopShortcuts,
-  addShortcut,
-  removeShortcut,
+  isFinderVisible, toggleFinderVisibility, bringFinderToFront, finderPosition, setFinderPosition, finderZIndex,
+  isSettingsVisible, toggleSettingsVisibility, bringSettingsToFront, settingsPosition, setSettingsPosition, settingsZIndex,
+  isNotesVisible, toggleNotesVisibility, bringNotesToFront, notesPosition, setNotesPosition, notesZIndex, noteContent, setNoteContent,
+  isWallpaperSettingsVisible, toggleWallpaperSettingsVisibility, bringWallpaperSettingsToFront, wallpaperSettingsPosition, setWallpaperSettingsPosition, wallpaperSettingsZIndex, customWallpaperUrl, setCustomWallpaperUrl,
+  desktopItems, dockShortcuts, desktopShortcuts, addShortcut, removeShortcut,
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
@@ -137,14 +141,14 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
       y: windowStartPos.y + dy,
     };
 
-    if (id === 'finder') {
-      setFinderPosition(newPosition);
-    } else if (id === 'settings') {
-      setSettingsPosition(newPosition);
-    }
+    if (id === 'finder') setFinderPosition(newPosition);
+    else if (id === 'settings') setSettingsPosition(newPosition);
+    else if (id === 'notes') setNotesPosition(newPosition);
+    else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(newPosition);
+
 
     animationFrameId.current = null; 
-  }, [setFinderPosition, setSettingsPosition]);
+  }, [setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition]);
 
   const handleDraggingInternal = useCallback((event: MouseEvent) => {
     event.preventDefault();
@@ -174,23 +178,38 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
        };
        if (id === 'finder') setFinderPosition(finalPosition);
        else if (id === 'settings') setSettingsPosition(finalPosition);
+       else if (id === 'notes') setNotesPosition(finalPosition);
+       else if (id === 'wallpaper-settings') setWallpaperSettingsPosition(finalPosition);
     }
 
     draggingWindowRef.current = null;
     latestMousePosition.current = null;
-  }, [handleDraggingInternal, setFinderPosition, setSettingsPosition]);
+  }, [handleDraggingInternal, setFinderPosition, setSettingsPosition, setNotesPosition, setWallpaperSettingsPosition]);
 
   const handleWindowDragStart = useCallback((
     event: ReactMouseEvent<HTMLDivElement>, 
-    windowId: 'finder' | 'settings'
+    windowId: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'
   ) => {
     let currentPosition: {x: number; y: number};
-    if (windowId === 'finder') {
-      bringFinderToFront();
-      currentPosition = finderPosition;
-    } else {
-      bringSettingsToFront();
-      currentPosition = settingsPosition;
+    switch(windowId) {
+      case 'finder':
+        bringFinderToFront();
+        currentPosition = finderPosition;
+        break;
+      case 'settings':
+        bringSettingsToFront();
+        currentPosition = settingsPosition;
+        break;
+      case 'notes':
+        bringNotesToFront();
+        currentPosition = notesPosition;
+        break;
+      case 'wallpaper-settings':
+        bringWallpaperSettingsToFront();
+        currentPosition = wallpaperSettingsPosition;
+        break;
+      default:
+        return; // Should not happen
     }
 
     draggingWindowRef.current = {
@@ -205,6 +224,8 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
   }, [
     bringFinderToFront, finderPosition, 
     bringSettingsToFront, settingsPosition, 
+    bringNotesToFront, notesPosition,
+    bringWallpaperSettingsToFront, wallpaperSettingsPosition,
     handleDraggingInternal, handleDragEndInternal
   ]);
 
@@ -218,20 +239,30 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     };
   }, [handleDraggingInternal, handleDragEndInternal]);
 
-  const currentWallpaper = wallpapers[timeOfDay];
+  const currentWallpaperSrc = customWallpaperUrl || defaultWallpapers[timeOfDay].src;
+  const currentWallpaperHint = customWallpaperUrl ? "user custom wallpaper" : defaultWallpapers[timeOfDay].hint;
 
   return (
     <div className="flex-grow relative flex items-start justify-start overflow-hidden p-4">
       <Image
-        src={currentWallpaper.src}
-        alt={`Dynamic wallpaper: ${currentWallpaper.hint}`}
-        data-ai-hint={currentWallpaper.hint}
+        key={currentWallpaperSrc} // Add key to force re-render on src change
+        src={currentWallpaperSrc}
+        alt={`Desktop wallpaper: ${currentWallpaperHint}`}
+        data-ai-hint={currentWallpaperHint}
         layout="fill"
         objectFit="cover"
         quality={85}
         priority
         className={`transition-opacity duration-1000 ${wallpaperLoaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={() => setWallpaperLoaded(true)}
+        onError={() => {
+          // Fallback if custom URL fails
+          if (customWallpaperUrl) {
+            alert('Failed to load custom wallpaper URL. Reverting to default.');
+            setCustomWallpaperUrl(null); // Revert to default dynamic wallpapers
+          }
+          // For default wallpapers, onError might indicate a placehold.co issue
+        }}
       />
       <DesktopClock />
       
@@ -240,7 +271,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
           <DesktopIcon
             key={item.id}
             name={item.name}
-            icon={item.icon === LinkIcon || typeof item.icon === 'string' ? LinkIcon : item.icon} // Handle string case for default mapping later
+            icon={item.icon === LinkIcon || typeof item.icon === 'string' ? LinkIcon : item.icon}
             onClick={() => handleDesktopItemClick(item)}
           />
         ))}
@@ -267,6 +298,28 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         desktopShortcuts={desktopShortcuts}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
+      />
+      <NotesWindow
+        isVisible={isNotesVisible}
+        position={notesPosition}
+        onClose={toggleNotesVisibility}
+        onMinimize={toggleNotesVisibility}
+        onMaximize={() => console.log('Maximize Notes (not implemented)')}
+        onDragStart={(e) => handleWindowDragStart(e, 'notes')}
+        zIndex={notesZIndex}
+        noteContent={noteContent}
+        setNoteContent={setNoteContent}
+      />
+      <WallpaperSettingsWindow
+        isVisible={isWallpaperSettingsVisible}
+        position={wallpaperSettingsPosition}
+        onClose={toggleWallpaperSettingsVisibility}
+        onMinimize={toggleWallpaperSettingsVisibility}
+        onMaximize={() => console.log('Maximize Wallpaper Settings (not implemented)')}
+        onDragStart={(e) => handleWindowDragStart(e, 'wallpaper-settings')}
+        zIndex={wallpaperSettingsZIndex}
+        currentWallpaperUrl={customWallpaperUrl}
+        setCustomWallpaperUrl={setCustomWallpaperUrl}
       />
     </div>
   );
