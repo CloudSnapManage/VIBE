@@ -5,8 +5,8 @@ import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent,
 import Image from 'next/image';
 import FinderWindow from './FinderWindow';
 import SettingsWindow from './SettingsWindow';
-import NotesWindow from './NotesWindow'; // Import NotesWindow
-import WallpaperSettingsWindow from './WallpaperSettingsWindow'; // Import WallpaperSettingsWindow
+import NotesWindow from './NotesWindow'; 
+import WallpaperSettingsWindow from './WallpaperSettingsWindow'; 
 import DesktopIcon from './DesktopIcon';
 import type { AppDefinition, UserShortcut } from '@/lib/types';
 import { Link as LinkIcon } from 'lucide-react';
@@ -53,7 +53,7 @@ const DesktopClock: React.FC = () => {
 };
 
 interface WindowDragState {
-  id: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'; // Added new window IDs
+  id: 'finder' | 'settings' | 'notes' | 'wallpaper-settings'; 
   startPos: { x: number; y: number };
   windowStartPos: { x: number; y: number };
 }
@@ -90,6 +90,9 @@ interface DesktopAreaProps {
   wallpaperSettingsZIndex: number;
   customWallpaperUrl: string | null;
   setCustomWallpaperUrl: (url: string | null) => void;
+  customWallpaperDataUri: string | null; // New prop
+  setCustomWallpaperDataUri: (dataUri: string | null) => void; // New prop
+
 
   desktopItems: AppDefinition[];
   dockShortcuts: UserShortcut[];
@@ -102,17 +105,21 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
   isFinderVisible, toggleFinderVisibility, bringFinderToFront, finderPosition, setFinderPosition, finderZIndex,
   isSettingsVisible, toggleSettingsVisibility, bringSettingsToFront, settingsPosition, setSettingsPosition, settingsZIndex,
   isNotesVisible, toggleNotesVisibility, bringNotesToFront, notesPosition, setNotesPosition, notesZIndex, noteContent, setNoteContent,
-  isWallpaperSettingsVisible, toggleWallpaperSettingsVisibility, bringWallpaperSettingsToFront, wallpaperSettingsPosition, setWallpaperSettingsPosition, wallpaperSettingsZIndex, customWallpaperUrl, setCustomWallpaperUrl,
+  isWallpaperSettingsVisible, toggleWallpaperSettingsVisibility, bringWallpaperSettingsToFront, wallpaperSettingsPosition, setWallpaperSettingsPosition, wallpaperSettingsZIndex, 
+  customWallpaperUrl, setCustomWallpaperUrl, customWallpaperDataUri, setCustomWallpaperDataUri,
   desktopItems, dockShortcuts, desktopShortcuts, addShortcut, removeShortcut,
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
+  const [isClientHydrated, setIsClientHydrated] = useState(false);
+
 
   const draggingWindowRef = useRef<WindowDragState | null>(null);
   const latestMousePosition = useRef<{ clientX: number; clientY: number } | null>(null);
   const animationFrameId = useRef<number | null>(null);
 
   useEffect(() => {
+    setIsClientHydrated(true);
     setTimeOfDay(getTimeOfDay());
     const interval = setInterval(() => setTimeOfDay(getTimeOfDay()), 1000 * 60 * 5);
     return () => clearInterval(interval);
@@ -209,7 +216,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         currentPosition = wallpaperSettingsPosition;
         break;
       default:
-        return; // Should not happen
+        return; 
     }
 
     draggingWindowRef.current = {
@@ -239,13 +246,35 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     };
   }, [handleDraggingInternal, handleDragEndInternal]);
 
-  const currentWallpaperSrc = customWallpaperUrl || defaultWallpapers[timeOfDay].src;
-  const currentWallpaperHint = customWallpaperUrl ? "user custom wallpaper" : defaultWallpapers[timeOfDay].hint;
+  const currentWallpaperSrc = (isClientHydrated && customWallpaperDataUri) 
+    ? customWallpaperDataUri 
+    : (isClientHydrated && customWallpaperUrl) 
+      ? customWallpaperUrl 
+      : defaultWallpapers[timeOfDay].src;
+
+  const currentWallpaperHint = (isClientHydrated && (customWallpaperDataUri || customWallpaperUrl))
+    ? "user custom wallpaper"
+    : defaultWallpapers[timeOfDay].hint;
+
+  const handleWallpaperError = () => {
+    setWallpaperLoaded(true); // Ensure opacity transition happens even on error
+    if (customWallpaperDataUri) {
+      console.warn('Failed to load custom wallpaper from Data URI. Clearing Data URI.');
+      setCustomWallpaperDataUri(null); // Clear bad Data URI
+      // The component will re-render, and if customWallpaperUrl exists, it will try that.
+      // If customWallpaperUrl also fails or is not set, it will go to default.
+    } else if (customWallpaperUrl) {
+      console.warn('Failed to load custom wallpaper from URL. Reverting to default.');
+      setCustomWallpaperUrl(null); // Revert to default dynamic wallpapers
+    }
+    // If it's a default wallpaper error, nothing specific to do here, console might show placehold.co issue.
+  };
+
 
   return (
     <div className="flex-grow relative flex items-start justify-start overflow-hidden p-4">
       <Image
-        key={currentWallpaperSrc} // Add key to force re-render on src change
+        key={currentWallpaperSrc} 
         src={currentWallpaperSrc}
         alt={`Desktop wallpaper: ${currentWallpaperHint}`}
         data-ai-hint={currentWallpaperHint}
@@ -255,14 +284,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         priority
         className={`transition-opacity duration-1000 ${wallpaperLoaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={() => setWallpaperLoaded(true)}
-        onError={() => {
-          // Fallback if custom URL fails
-          if (customWallpaperUrl) {
-            alert('Failed to load custom wallpaper URL. Reverting to default.');
-            setCustomWallpaperUrl(null); // Revert to default dynamic wallpapers
-          }
-          // For default wallpapers, onError might indicate a placehold.co issue
-        }}
+        onError={handleWallpaperError}
       />
       <DesktopClock />
       
@@ -320,6 +342,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         zIndex={wallpaperSettingsZIndex}
         currentWallpaperUrl={customWallpaperUrl}
         setCustomWallpaperUrl={setCustomWallpaperUrl}
+        setCustomWallpaperDataUri={setCustomWallpaperDataUri}
       />
     </div>
   );

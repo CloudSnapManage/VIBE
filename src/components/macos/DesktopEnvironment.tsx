@@ -77,8 +77,10 @@ const DesktopEnvironment: React.FC = () => {
   const [wallpaperSettingsPosition, setWallpaperSettingsPosition] = useLocalStorage('wallpaperSettingsPosition', DEFAULT_WALLPAPER_SETTINGS_POS);
   const [wallpaperSettingsZIndex, setWallpaperSettingsZIndex] = useState(DEFAULT_Z_INDEX);
   const [customWallpaperUrl, setCustomWallpaperUrl] = useLocalStorage<string | null>('customWallpaperUrl', null);
+  const [customWallpaperDataUri, setCustomWallpaperDataUri] = useLocalStorage<string | null>('customWallpaperDataUri', null);
 
-  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX); // Initial base z-index
+
+  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX); 
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
@@ -218,7 +220,7 @@ const DesktopEnvironment: React.FC = () => {
 
   return (
     <div 
-      className="flex flex-col h-full w-full overflow-hidden select-none bg-background"
+      className="flex flex-col h-full w-full overflow-hidden select-none bg-transparent"
     >
       <MenuBar onToggleFinder={toggleFinderVisibility} />
       <DesktopArea
@@ -253,6 +255,8 @@ const DesktopEnvironment: React.FC = () => {
         wallpaperSettingsZIndex={wallpaperSettingsZIndex}
         customWallpaperUrl={isClientHydrated ? customWallpaperUrl : null}
         setCustomWallpaperUrl={setCustomWallpaperUrl}
+        customWallpaperDataUri={isClientHydrated ? customWallpaperDataUri : null}
+        setCustomWallpaperDataUri={setCustomWallpaperDataUri}
 
         desktopItems={combinedDesktopItems}
         dockShortcuts={userDockShortcuts} 
