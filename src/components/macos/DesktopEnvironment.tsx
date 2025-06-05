@@ -5,16 +5,15 @@ import React, { useState, useCallback, useEffect } from 'react';
 import MenuBar from './MenuBar';
 import DesktopArea from './DesktopArea';
 import Dock from './Dock';
-// import SettingsWindow from './SettingsWindow'; // No longer directly rendered here
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import type { UserShortcut, AppDefinition } from '@/lib/types';
-import { FolderOpen, Settings, Search, Link as LinkIcon } from 'lucide-react'; // LinkIcon for generic URL icons
-import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
+import { FolderOpen, Settings, Search, Link as LinkIcon } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_FINDER_APP: AppDefinition = {
   id: 'finder-app',
   name: 'Finder',
-  icon: FolderOpen, // Direct Lucide icon
+  icon: FolderOpen,
   type: 'app',
   isDefault: true,
 };
@@ -22,7 +21,7 @@ const DEFAULT_FINDER_APP: AppDefinition = {
 const DEFAULT_SETTINGS_APP: AppDefinition = {
   id: 'settings-app',
   name: 'System Settings',
-  icon: Settings, // Direct Lucide icon
+  icon: Settings,
   type: 'app',
   isDefault: true,
 };
@@ -37,6 +36,8 @@ const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
 
 
 const DesktopEnvironment: React.FC = () => {
+  const [isClientHydrated, setIsClientHydrated] = useState(false);
+
   const [isFinderVisible, setIsFinderVisible] = useState(true);
   const [finderPosition, setFinderPosition] = useState({ x: 0, y: 0 });
   const [finderZIndex, setFinderZIndex] = useState(20);
@@ -49,6 +50,10 @@ const DesktopEnvironment: React.FC = () => {
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
+
+  useEffect(() => {
+    setIsClientHydrated(true);
+  }, []);
 
   const bringToFront = useCallback((setter: React.Dispatch<React.SetStateAction<number>>) => {
     setMaxZIndex(prevMax => {
@@ -109,32 +114,39 @@ const DesktopEnvironment: React.FC = () => {
     }
   }, [setUserDockShortcuts, setUserDesktopShortcuts]);
 
+  const userDockItems: AppDefinition[] = isClientHydrated 
+    ? userDockShortcuts.map(sc => ({
+        id: sc.id,
+        name: sc.name,
+        icon: LinkIcon, 
+        type: 'url' as 'url',
+        url: sc.url,
+        isDefault: false,
+      }))
+    : [];
+
   const combinedDockItems: AppDefinition[] = [
     DEFAULT_FINDER_APP,
     DEFAULT_SETTINGS_APP,
-    ...userDockShortcuts.map(sc => ({
-      id: sc.id,
-      name: sc.name,
-      icon: LinkIcon, // Generic icon for user shortcuts
-      type: 'url' as 'url',
-      url: sc.url,
-      isDefault: false,
-    })),
-     // Add other default dock apps here if needed
+    ...userDockItems,
     { id: 'safari-default', name: 'Safari', icon: 'Globe2', type: 'url', url: 'https://www.apple.com/safari/', isDefault: true },
     { id: 'mail-default', name: 'Mail', icon: 'Mail', type: 'url', url: 'mailto:', isDefault: true },
   ];
 
+  const userDesktopItems: AppDefinition[] = isClientHydrated
+    ? userDesktopShortcuts.map(sc => ({
+        id: sc.id,
+        name: sc.name,
+        icon: LinkIcon,
+        type: 'url' as 'url',
+        url: sc.url,
+        isDefault: false,
+      }))
+    : [];
+
   const combinedDesktopItems: AppDefinition[] = [
     DEFAULT_SEARCH_DESKTOP_ICON,
-    ...userDesktopShortcuts.map(sc => ({
-      id: sc.id,
-      name: sc.name,
-      icon: LinkIcon, // Generic icon for user shortcuts
-      type: 'url' as 'url',
-      url: sc.url,
-      isDefault: false,
-    })),
+    ...userDesktopItems,
   ];
 
 
@@ -157,12 +169,11 @@ const DesktopEnvironment: React.FC = () => {
         setSettingsPosition={setSettingsPosition}
         settingsZIndex={settingsZIndex}
         desktopItems={combinedDesktopItems}
-        dockShortcuts={userDockShortcuts}
+        dockShortcuts={userDockShortcuts} 
         desktopShortcuts={userDesktopShortcuts}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
       />
-      {/* SettingsWindow is now rendered within DesktopArea */}
       <Dock items={combinedDockItems} />
     </div>
   );
