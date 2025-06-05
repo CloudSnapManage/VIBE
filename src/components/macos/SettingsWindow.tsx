@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings as SettingsIcon, Plus, Trash2, Sun, Moon } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Sun, Moon, Link as LinkIconLucide } from 'lucide-react'; // Renamed LinkIcon to avoid conflict
 import type { UserShortcut } from '@/lib/types';
+import Image from 'next/image'; // Import next/image
 
 interface SettingsWindowProps {
   isVisible: boolean;
@@ -23,7 +24,7 @@ interface SettingsWindowProps {
   zIndex: number;
   dockShortcuts: UserShortcut[];
   desktopShortcuts: UserShortcut[];
-  addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
+  addShortcut: (type: 'dock' | 'desktop', name: string, url: string, iconUrl?: string) => void;
   removeShortcut: (type: 'dock' | 'desktop', id: string) => void;
   currentTheme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
@@ -57,8 +58,9 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
     e.preventDefault();
     if (newItemName.trim() && newItemUrl.trim()) {
       try {
-        new URL(newItemUrl); 
-        addShortcut(activeShortcutTab, newItemName, newItemUrl);
+        const parsedUrl = new URL(newItemUrl.startsWith('http') ? newItemUrl : `https://${newItemUrl}`);
+        const faviconUrl = `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${parsedUrl.origin}&size=64`;
+        addShortcut(activeShortcutTab, newItemName, parsedUrl.href, faviconUrl);
         setNewItemName('');
         setNewItemUrl('');
       } catch (error) {
@@ -72,14 +74,21 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
   const renderShortcutList = (type: 'dock' | 'desktop') => {
     const items = type === 'dock' ? dockShortcuts : desktopShortcuts;
     return (
-      <ScrollArea className="h-[150px] mt-4 pr-3"> {/* Adjusted height */}
+      <ScrollArea className="h-[150px] mt-4 pr-3">
         <div className="space-y-2">
           {items.length === 0 && <p className="text-sm text-muted-foreground">No custom {type} shortcuts yet.</p>}
           {items.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
-              <div>
-                <p className="font-medium text-sm">{item.name}</p>
-                <p className="text-xs text-muted-foreground truncate max-w-[200px]">{item.url}</p>
+              <div className="flex items-center space-x-2">
+                {item.icon ? (
+                  <Image src={item.icon} alt={`${item.name} favicon`} width={20} height={20} className="rounded-sm" />
+                ) : (
+                  <LinkIconLucide size={20} className="text-muted-foreground" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">{item.name}</p>
+                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">{item.url}</p>
+                </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => removeShortcut(type, item.id)} aria-label={`Remove ${item.name}`}>
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -94,13 +103,13 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
   return (
     <div
       className="w-full max-w-xl h-[550px] bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden
-                 border border-black/10 absolute" // Adjusted max-width and height
+                 border border-black/10 absolute"
       style={{
         transform: `translate(${position.x}px, ${position.y}px)`,
         left: '50%',
         top: '50%',
-        marginLeft: '-16rem', // Half of new potential max-w-xl (32rem/2)
-        marginTop: '-275px', // Half of new h-[550px]
+        marginLeft: '-16rem', 
+        marginTop: '-275px', 
         zIndex,
         cursor: 'default',
       }}
@@ -117,7 +126,7 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
           <SettingsIcon size={16} className="mr-1.5 text-primary" />
           <span id="settings-window-title">System Settings</span>
         </div>
-        <div className="w-14"></div> 
+        <div className="w-14"></div>
       </header>
       <main className="flex-grow p-4 bg-background overflow-y-auto">
         <Tabs value={activeMainTab} onValueChange={(value) => setActiveMainTab(value as 'shortcuts' | 'appearance')} className="w-full">
@@ -125,7 +134,7 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
             <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="shortcuts">
             <Tabs value={activeShortcutTab} onValueChange={(value) => setActiveShortcutTab(value as 'dock' | 'desktop')} className="w-full mt-2">
               <TabsList className="grid w-full grid-cols-2">

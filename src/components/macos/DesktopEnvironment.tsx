@@ -30,7 +30,7 @@ const DesktopEnvironment: React.FC = () => {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', DEFAULT_SETTINGS_POS);
   const [settingsZIndex, setSettingsZIndex] = useState(DEFAULT_Z_INDEX);
-  
+
   const [isNotesVisible, setIsNotesVisible] = useState(false);
   const [notesPosition, setNotesPosition] = useLocalStorage('notesPosition', DEFAULT_NOTES_POS);
   const [notesZIndex, setNotesZIndex] = useState(DEFAULT_Z_INDEX);
@@ -43,7 +43,7 @@ const DesktopEnvironment: React.FC = () => {
   const [customWallpaperDataUri, setCustomWallpaperDataUri] = useLocalStorage<string | null>('customWallpaperDataUri', null);
 
   const [stickyNotes, setStickyNotes] = useLocalStorage<StickyNoteState[]>('stickyNotes', []);
-  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX + 5); 
+  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX + 5);
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
@@ -58,7 +58,7 @@ const DesktopEnvironment: React.FC = () => {
     stickyNotes.forEach(note => currentMax = Math.max(currentMax, note.zIndex));
     setMaxZIndex(currentMax);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Initialize maxZIndex once on mount based on potentially loaded states
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -82,7 +82,7 @@ const DesktopEnvironment: React.FC = () => {
   const bringSettingsToFront = useCallback(() => bringToFront(setSettingsZIndex), [bringToFront]);
   const bringNotesToFront = useCallback(() => bringToFront(setNotesZIndex), [bringToFront]);
   const bringWallpaperSettingsToFront = useCallback(() => bringToFront(setWallpaperSettingsZIndex), [bringToFront]);
-  
+
   const bringStickyNoteToFront = useCallback((id: string) => {
     setMaxZIndex(prevMax => {
       const newZ = prevMax + 1;
@@ -134,7 +134,7 @@ const DesktopEnvironment: React.FC = () => {
     if (!isSettingsVisible) setIsSettingsVisible(true);
     bringSettingsToFront();
   }, [isSettingsVisible, bringSettingsToFront]);
-  
+
   const handleDockNotesClick = useCallback(() => {
     if (!isNotesVisible) setIsNotesVisible(true);
     bringNotesToFront();
@@ -146,26 +146,24 @@ const DesktopEnvironment: React.FC = () => {
   }, [isWallpaperSettingsVisible, bringWallpaperSettingsToFront]);
 
   const addStickyNote = useCallback(() => {
-    const newNoteId = uuidv4();
-    const newZValue = maxZIndex + 1; 
-
-    const newStickyBase: Omit<StickyNoteState, 'position'> = { // Position will be set in the updater
-      id: newNoteId,
-      content: '',
-      size: DEFAULT_STICKY_NOTE_SIZE,
-      zIndex: newZValue,
-    };
-
     setStickyNotes(prevNotes => {
+      const newNoteId = uuidv4();
+      const newZValue = maxZIndex + 1;
       const cascadedPosition = {
         x: DEFAULT_STICKY_NOTE_POS.x + (prevNotes.length % 5) * 20,
         y: DEFAULT_STICKY_NOTE_POS.y + (prevNotes.length % 5) * 20,
       };
-      return [...prevNotes, { ...newStickyBase, position: cascadedPosition }];
+      const newSticky: StickyNoteState = {
+        id: newNoteId,
+        content: '',
+        position: cascadedPosition,
+        size: DEFAULT_STICKY_NOTE_SIZE,
+        zIndex: newZValue,
+      };
+      setMaxZIndex(newZValue);
+      return [...prevNotes, newSticky];
     });
-
-    setMaxZIndex(newZValue);
-  }, [maxZIndex, setStickyNotes, setMaxZIndex]);
+  }, [maxZIndex, setStickyNotes]);
 
 
   const updateStickyNoteContent = useCallback((id: string, content: string) => {
@@ -194,7 +192,7 @@ const DesktopEnvironment: React.FC = () => {
     isDefault: true,
     active: isFinderVisible,
   };
-  
+
   const DEFAULT_SETTINGS_APP: AppDefinition = {
     id: 'settings-app',
     name: 'System Settings',
@@ -204,7 +202,7 @@ const DesktopEnvironment: React.FC = () => {
     isDefault: true,
     active: isSettingsVisible,
   };
-  
+
   const DEFAULT_NOTES_APP: AppDefinition = {
     id: 'notes-app',
     name: 'Notes',
@@ -214,7 +212,7 @@ const DesktopEnvironment: React.FC = () => {
     isDefault: true,
     active: isNotesVisible,
   };
-  
+
   const DEFAULT_WALLPAPER_SETTINGS_APP: AppDefinition = {
     id: 'wallpaper-settings-app',
     name: 'Wallpaper Settings',
@@ -224,7 +222,7 @@ const DesktopEnvironment: React.FC = () => {
     isDefault: true,
     active: isWallpaperSettingsVisible,
   };
-  
+
   const ADD_STICKY_NOTE_APP: AppDefinition = {
     id: 'add-sticky-note-app',
     name: 'New Sticky Note',
@@ -232,7 +230,7 @@ const DesktopEnvironment: React.FC = () => {
     type: 'app',
     action: addStickyNote,
     isDefault: true,
-    active: false, 
+    active: false,
   };
 
   const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
@@ -245,8 +243,8 @@ const DesktopEnvironment: React.FC = () => {
   };
 
 
-  const addShortcut = useCallback((type: 'dock' | 'desktop', name: string, url: string) => {
-    const newShortcut: UserShortcut = { id: uuidv4(), name, url };
+  const addShortcut = useCallback((type: 'dock' | 'desktop', name: string, url: string, iconUrl?: string) => {
+    const newShortcut: UserShortcut = { id: uuidv4(), name, url, icon: iconUrl };
     if (type === 'dock') {
       setUserDockShortcuts(prev => [...prev, newShortcut]);
     } else {
@@ -266,11 +264,11 @@ const DesktopEnvironment: React.FC = () => {
     ? userDockShortcuts.map(sc => ({
         id: sc.id,
         name: sc.name,
-        icon: LinkIcon, 
+        icon: sc.icon || LinkIcon, // Use fetched icon or fallback to LinkIcon
         type: 'url' as 'url',
         url: sc.url,
         isDefault: false,
-        active: false, 
+        active: false,
       }))
     : [];
 
@@ -289,7 +287,7 @@ const DesktopEnvironment: React.FC = () => {
     ? userDesktopShortcuts.map(sc => ({
         id: sc.id,
         name: sc.name,
-        icon: LinkIcon,
+        icon: sc.icon || LinkIcon, // Use fetched icon or fallback to LinkIcon
         type: 'url' as 'url',
         url: sc.url,
         isDefault: false,
@@ -303,7 +301,7 @@ const DesktopEnvironment: React.FC = () => {
 
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full w-full overflow-hidden select-none bg-transparent"
     >
       <MenuBar onToggleFinder={toggleFinderVisibility} />
@@ -323,14 +321,14 @@ const DesktopEnvironment: React.FC = () => {
         settingsZIndex={settingsZIndex}
         theme={theme}
         setTheme={setTheme}
-        
+
         isNotesVisible={isNotesVisible}
         toggleNotesVisibility={toggleNotesVisibility}
         bringNotesToFront={bringNotesToFront}
         notesPosition={isClientHydrated ? notesPosition : DEFAULT_NOTES_POS}
         setNotesPosition={setNotesPosition}
         notesZIndex={notesZIndex}
-        noteContent={isClientHydrated ? noteContent : ''} 
+        noteContent={isClientHydrated ? noteContent : ''}
         setNoteContent={setNoteContent}
 
         isWallpaperSettingsVisible={isWallpaperSettingsVisible}
@@ -345,7 +343,7 @@ const DesktopEnvironment: React.FC = () => {
         setCustomWallpaperDataUri={setCustomWallpaperDataUri}
 
         desktopItems={combinedDesktopItems}
-        dockShortcuts={isClientHydrated ? userDockShortcuts : []} 
+        dockShortcuts={isClientHydrated ? userDockShortcuts : []}
         desktopShortcuts={isClientHydrated ? userDesktopShortcuts : []}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
@@ -363,4 +361,3 @@ const DesktopEnvironment: React.FC = () => {
 };
 
 export default DesktopEnvironment;
-

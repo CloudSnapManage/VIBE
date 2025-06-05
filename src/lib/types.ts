@@ -5,16 +5,16 @@ export interface UserShortcut {
   id: string;
   name: string;
   url: string;
-  icon?: string; 
+  icon?: string; // Will store the fetched favicon URL
 }
 
 export interface AppDefinition {
   id: string;
   name: string;
-  icon: LucideIcon | string; 
+  icon: LucideIcon | string; // Can be a Lucide component or an image URL string
   type: 'app' | 'url';
-  action?: () => void; 
-  url?: string; 
+  action?: () => void;
+  url?: string;
   isDefault?: boolean;
   active?: boolean;
 }

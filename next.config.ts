@@ -35,6 +35,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 't0.gstatic.com', // For Google Favicon Service
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.google.com', // For Google Favicon Service (alternative)
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };
