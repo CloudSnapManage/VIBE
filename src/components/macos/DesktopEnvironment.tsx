@@ -10,6 +10,12 @@ import type { UserShortcut, AppDefinition } from '@/lib/types';
 import { FolderOpen, Settings, Search, Link as LinkIcon, FileText, Palette } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
+const DEFAULT_FINDER_POS = { x: 20, y: 20 };
+const DEFAULT_SETTINGS_POS = { x: 70, y: 70 };
+const DEFAULT_NOTES_POS = { x: 120, y: 120 };
+const DEFAULT_WALLPAPER_SETTINGS_POS = { x: 170, y: 170 };
+const DEFAULT_Z_INDEX = 20;
+
 const DEFAULT_FINDER_APP: AppDefinition = {
   id: 'finder-app',
   name: 'Finder',
@@ -55,24 +61,24 @@ const DesktopEnvironment: React.FC = () => {
   const [isClientHydrated, setIsClientHydrated] = useState(false);
 
   const [isFinderVisible, setIsFinderVisible] = useState(true);
-  const [finderPosition, setFinderPosition] = useLocalStorage('finderPosition', { x: 20, y: 20 });
-  const [finderZIndex, setFinderZIndex] = useState(20);
+  const [finderPosition, setFinderPosition] = useLocalStorage('finderPosition', DEFAULT_FINDER_POS);
+  const [finderZIndex, setFinderZIndex] = useState(DEFAULT_Z_INDEX);
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', { x: 70, y: 70 });
-  const [settingsZIndex, setSettingsZIndex] = useState(20);
+  const [settingsPosition, setSettingsPosition] = useLocalStorage('settingsPosition', DEFAULT_SETTINGS_POS);
+  const [settingsZIndex, setSettingsZIndex] = useState(DEFAULT_Z_INDEX);
   
   const [isNotesVisible, setIsNotesVisible] = useState(false);
-  const [notesPosition, setNotesPosition] = useLocalStorage('notesPosition', { x: 120, y: 120 });
-  const [notesZIndex, setNotesZIndex] = useState(20);
+  const [notesPosition, setNotesPosition] = useLocalStorage('notesPosition', DEFAULT_NOTES_POS);
+  const [notesZIndex, setNotesZIndex] = useState(DEFAULT_Z_INDEX);
   const [noteContent, setNoteContent] = useLocalStorage('noteContent', '');
 
   const [isWallpaperSettingsVisible, setIsWallpaperSettingsVisible] = useState(false);
-  const [wallpaperSettingsPosition, setWallpaperSettingsPosition] = useLocalStorage('wallpaperSettingsPosition', { x: 170, y: 170 });
-  const [wallpaperSettingsZIndex, setWallpaperSettingsZIndex] = useState(20);
+  const [wallpaperSettingsPosition, setWallpaperSettingsPosition] = useLocalStorage('wallpaperSettingsPosition', DEFAULT_WALLPAPER_SETTINGS_POS);
+  const [wallpaperSettingsZIndex, setWallpaperSettingsZIndex] = useState(DEFAULT_Z_INDEX);
   const [customWallpaperUrl, setCustomWallpaperUrl] = useLocalStorage<string | null>('customWallpaperUrl', null);
 
-  const [maxZIndex, setMaxZIndex] = useState(20); // Initial base z-index
+  const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX); // Initial base z-index
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
   const [userDesktopShortcuts, setUserDesktopShortcuts] = useLocalStorage<UserShortcut[]>('userDesktopShortcuts', []);
@@ -219,33 +225,33 @@ const DesktopEnvironment: React.FC = () => {
         isFinderVisible={isFinderVisible}
         toggleFinderVisibility={toggleFinderVisibility}
         bringFinderToFront={bringFinderToFront}
-        finderPosition={finderPosition}
+        finderPosition={isClientHydrated ? finderPosition : DEFAULT_FINDER_POS}
         setFinderPosition={setFinderPosition}
         finderZIndex={finderZIndex}
 
         isSettingsVisible={isSettingsVisible}
         toggleSettingsVisibility={toggleSettingsVisibility}
         bringSettingsToFront={bringSettingsToFront}
-        settingsPosition={settingsPosition}
+        settingsPosition={isClientHydrated ? settingsPosition : DEFAULT_SETTINGS_POS}
         setSettingsPosition={setSettingsPosition}
         settingsZIndex={settingsZIndex}
         
         isNotesVisible={isNotesVisible}
         toggleNotesVisibility={toggleNotesVisibility}
         bringNotesToFront={bringNotesToFront}
-        notesPosition={notesPosition}
+        notesPosition={isClientHydrated ? notesPosition : DEFAULT_NOTES_POS}
         setNotesPosition={setNotesPosition}
         notesZIndex={notesZIndex}
-        noteContent={noteContent}
+        noteContent={noteContent} /* noteContent comes from localStorage but is text, less likely for hydration with Textarea */
         setNoteContent={setNoteContent}
 
         isWallpaperSettingsVisible={isWallpaperSettingsVisible}
         toggleWallpaperSettingsVisibility={toggleWallpaperSettingsVisibility}
         bringWallpaperSettingsToFront={bringWallpaperSettingsToFront}
-        wallpaperSettingsPosition={wallpaperSettingsPosition}
+        wallpaperSettingsPosition={isClientHydrated ? wallpaperSettingsPosition : DEFAULT_WALLPAPER_SETTINGS_POS}
         setWallpaperSettingsPosition={setWallpaperSettingsPosition}
         wallpaperSettingsZIndex={wallpaperSettingsZIndex}
-        customWallpaperUrl={customWallpaperUrl}
+        customWallpaperUrl={customWallpaperUrl} /* customWallpaperUrl affects an Image src, also handled by isClientHydrated logic if needed in DesktopArea */
         setCustomWallpaperUrl={setCustomWallpaperUrl}
 
         desktopItems={combinedDesktopItems}
