@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent 
 import Image from 'next/image';
 import FinderWindow from './FinderWindow';
 import DesktopIcon from './DesktopIcon';
-import { Search, Link as LinkIcon } from 'lucide-react'; // Example icons
+import { Search } from 'lucide-react'; // Example icons
 
 const wallpapers = {
   morning: { src: 'https://placehold.co/1920x1080.png', hint: 'sunrise mountain' },
@@ -33,17 +33,28 @@ const getTimeOfDay = (): TimeOfDay => {
 };
 
 const DesktopClock: React.FC = () => {
-  const [time, setTime] = useState(new Date());
+  const [timeString, setTimeString] = useState<string | null>(null);
 
   useEffect(() => {
-    const timerId = setInterval(() => setTime(new Date()), 1000);
+    // Set initial time on client-side mount
+    setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+    const timerId = setInterval(() => {
+      setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 1000); // Update every second, though visually it only changes per minute
+
     return () => clearInterval(timerId);
   }, []);
+
+  if (timeString === null) {
+    // Render nothing or a placeholder on the server and during initial client render
+    return null; 
+  }
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
       <h1 className="text-8xl font-bold text-white/80 mix-blend-overlay select-none">
-        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {timeString}
       </h1>
     </div>
   );
