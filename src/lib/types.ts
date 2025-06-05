@@ -5,25 +5,24 @@ export interface UserShortcut {
   id: string;
   name: string;
   url: string;
-  icon?: string; // Placeholder for future custom icon identifiers, for now defaults to 'Link'
+  icon?: string; 
 }
 
 export interface AppDefinition {
   id: string;
   name: string;
-  icon: LucideIcon | string; // LucideIcon component or string for specific handling
+  icon: LucideIcon | string; 
   type: 'app' | 'url';
-  action?: () => void; // For 'app' type
-  url?: string; // For 'url' type
-  isDefault?: boolean; // To differentiate default apps from user-added ones
+  action?: () => void; 
+  url?: string; 
+  isDefault?: boolean;
+  active?: boolean; // Added to indicate if the app's window is currently visible
 }
 
-// Simple type for a single note for now
 export interface NoteData {
   content: string;
 }
 
-// Type for custom wallpaper setting
 export interface WallpaperSettings {
   customUrl: string | null;
 }

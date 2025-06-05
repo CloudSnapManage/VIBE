@@ -16,49 +16,10 @@ const DEFAULT_NOTES_POS = { x: 120, y: 120 };
 const DEFAULT_WALLPAPER_SETTINGS_POS = { x: 170, y: 170 };
 const DEFAULT_Z_INDEX = 20;
 
-const DEFAULT_FINDER_APP: AppDefinition = {
-  id: 'finder-app',
-  name: 'Finder',
-  icon: FolderOpen,
-  type: 'app',
-  isDefault: true,
-};
-
-const DEFAULT_SETTINGS_APP: AppDefinition = {
-  id: 'settings-app',
-  name: 'System Settings',
-  icon: Settings,
-  type: 'app',
-  isDefault: true,
-};
-
-const DEFAULT_NOTES_APP: AppDefinition = {
-  id: 'notes-app',
-  name: 'Notes',
-  icon: FileText,
-  type: 'app',
-  isDefault: true,
-};
-
-const DEFAULT_WALLPAPER_SETTINGS_APP: AppDefinition = {
-  id: 'wallpaper-settings-app',
-  name: 'Wallpaper Settings',
-  icon: Palette,
-  type: 'app',
-  isDefault: true,
-};
-
-const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
-  id: 'search-desktop-icon',
-  name: 'Search',
-  icon: Search,
-  type: 'app',
-  isDefault: true,
-};
-
-
 const DesktopEnvironment: React.FC = () => {
   const [isClientHydrated, setIsClientHydrated] = useState(false);
+
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
 
   const [isFinderVisible, setIsFinderVisible] = useState(true);
   const [finderPosition, setFinderPosition] = useLocalStorage('finderPosition', DEFAULT_FINDER_POS);
@@ -79,7 +40,6 @@ const DesktopEnvironment: React.FC = () => {
   const [customWallpaperUrl, setCustomWallpaperUrl] = useLocalStorage<string | null>('customWallpaperUrl', null);
   const [customWallpaperDataUri, setCustomWallpaperDataUri] = useLocalStorage<string | null>('customWallpaperDataUri', null);
 
-
   const [maxZIndex, setMaxZIndex] = useState(DEFAULT_Z_INDEX); 
 
   const [userDockShortcuts, setUserDockShortcuts] = useLocalStorage<UserShortcut[]>('userDockShortcuts', []);
@@ -88,6 +48,16 @@ const DesktopEnvironment: React.FC = () => {
   useEffect(() => {
     setIsClientHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [theme]);
 
   const bringToFront = useCallback((setter: React.Dispatch<React.SetStateAction<number>>) => {
     setMaxZIndex(prevMax => {
@@ -155,12 +125,54 @@ const DesktopEnvironment: React.FC = () => {
     bringWallpaperSettingsToFront();
   }, [isWallpaperSettingsVisible, bringWallpaperSettingsToFront]);
 
-
-  DEFAULT_FINDER_APP.action = handleDockFinderClick;
-  DEFAULT_SETTINGS_APP.action = handleDockSettingsClick;
-  DEFAULT_NOTES_APP.action = handleDockNotesClick;
-  DEFAULT_WALLPAPER_SETTINGS_APP.action = handleDockWallpaperSettingsClick;
-  DEFAULT_SEARCH_DESKTOP_ICON.action = toggleFinderVisibility;
+  const DEFAULT_FINDER_APP: AppDefinition = {
+    id: 'finder-app',
+    name: 'Finder',
+    icon: FolderOpen,
+    type: 'app',
+    action: handleDockFinderClick,
+    isDefault: true,
+    active: isFinderVisible,
+  };
+  
+  const DEFAULT_SETTINGS_APP: AppDefinition = {
+    id: 'settings-app',
+    name: 'System Settings',
+    icon: Settings,
+    type: 'app',
+    action: handleDockSettingsClick,
+    isDefault: true,
+    active: isSettingsVisible,
+  };
+  
+  const DEFAULT_NOTES_APP: AppDefinition = {
+    id: 'notes-app',
+    name: 'Notes',
+    icon: FileText,
+    type: 'app',
+    action: handleDockNotesClick,
+    isDefault: true,
+    active: isNotesVisible,
+  };
+  
+  const DEFAULT_WALLPAPER_SETTINGS_APP: AppDefinition = {
+    id: 'wallpaper-settings-app',
+    name: 'Wallpaper Settings',
+    icon: Palette,
+    type: 'app',
+    action: handleDockWallpaperSettingsClick,
+    isDefault: true,
+    active: isWallpaperSettingsVisible,
+  };
+  
+  const DEFAULT_SEARCH_DESKTOP_ICON: AppDefinition = {
+    id: 'search-desktop-icon',
+    name: 'Search',
+    icon: Search,
+    type: 'app',
+    action: toggleFinderVisibility, // Re-using finder toggle for desktop search icon
+    isDefault: true,
+  };
 
 
   const addShortcut = useCallback((type: 'dock' | 'desktop', name: string, url: string) => {
@@ -188,6 +200,7 @@ const DesktopEnvironment: React.FC = () => {
         type: 'url' as 'url',
         url: sc.url,
         isDefault: false,
+        active: false, // URL shortcuts don't have an "active" window state in this context
       }))
     : [];
 
@@ -197,8 +210,8 @@ const DesktopEnvironment: React.FC = () => {
     DEFAULT_NOTES_APP,
     DEFAULT_WALLPAPER_SETTINGS_APP,
     ...userDockItems,
-    { id: 'safari-default', name: 'Safari', icon: 'Globe2', type: 'url', url: 'https://www.apple.com/safari/', isDefault: true },
-    { id: 'mail-default', name: 'Mail', icon: 'Mail', type: 'url', url: 'mailto:', isDefault: true },
+    { id: 'safari-default', name: 'Safari', icon: 'Globe2', type: 'url', url: 'https://www.apple.com/safari/', isDefault: true, active: false },
+    { id: 'mail-default', name: 'Mail', icon: 'Mail', type: 'url', url: 'mailto:', isDefault: true, active: false },
   ];
 
   const userDesktopItems: AppDefinition[] = isClientHydrated
@@ -237,6 +250,8 @@ const DesktopEnvironment: React.FC = () => {
         settingsPosition={isClientHydrated ? settingsPosition : DEFAULT_SETTINGS_POS}
         setSettingsPosition={setSettingsPosition}
         settingsZIndex={settingsZIndex}
+        theme={theme}
+        setTheme={setTheme}
         
         isNotesVisible={isNotesVisible}
         toggleNotesVisibility={toggleNotesVisibility}

@@ -3,7 +3,7 @@ import React from 'react';
 import DockItem from './DockItem';
 import { Separator } from '@/components/ui/separator';
 import type { AppDefinition } from '@/lib/types';
-import * as LucideIcons from 'lucide-react'; // Import all icons
+import * as LucideIcons from 'lucide-react'; 
 
 interface DockProps {
   items: AppDefinition[];
@@ -13,9 +13,9 @@ const Dock: React.FC<DockProps> = ({ items }) => {
   const getIconComponent = (iconNameOrComponent: AppDefinition['icon']): LucideIcons.LucideIcon => {
     if (typeof iconNameOrComponent === 'string') {
       const IconComponent = (LucideIcons as any)[iconNameOrComponent as any];
-      return IconComponent || LucideIcons.Link; // Default to Link icon if string name not found
+      return IconComponent || LucideIcons.Link; 
     }
-    return iconNameOrComponent as LucideIcons.LucideIcon; // It's already a component
+    return iconNameOrComponent as LucideIcons.LucideIcon; 
   };
 
   return (
@@ -33,9 +33,8 @@ const Dock: React.FC<DockProps> = ({ items }) => {
                 icon={IconComponent} 
                 onClick={item.type === 'app' ? item.action : undefined}
                 url={item.type === 'url' ? item.url : undefined}
-                isActive={false} // isActive logic can be enhanced later
+                isActive={item.active === undefined ? (item.type === 'app' ? false : false) : item.active}
               />
-              {/* Example separators, adjust as needed or make dynamic */}
               {(item.name === 'Finder' || item.name === 'System Settings' || item.id === 'safari-default') && index < items.length -1 && (
                  !items[index+1].isDefault || item.name === 'System Settings'
               ) && (

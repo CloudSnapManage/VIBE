@@ -72,6 +72,8 @@ interface DesktopAreaProps {
   settingsPosition: { x: number; y: number };
   setSettingsPosition: (position: { x: number; y: number } | ((prev: {x: number; y: number}) => {x: number; y: number})) => void;
   settingsZIndex: number;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
   
   isNotesVisible: boolean;
   toggleNotesVisibility: () => void;
@@ -90,8 +92,8 @@ interface DesktopAreaProps {
   wallpaperSettingsZIndex: number;
   customWallpaperUrl: string | null;
   setCustomWallpaperUrl: (url: string | null) => void;
-  customWallpaperDataUri: string | null; // New prop
-  setCustomWallpaperDataUri: (dataUri: string | null) => void; // New prop
+  customWallpaperDataUri: string | null;
+  setCustomWallpaperDataUri: (dataUri: string | null) => void;
 
 
   desktopItems: AppDefinition[];
@@ -103,7 +105,7 @@ interface DesktopAreaProps {
 
 const DesktopArea: React.FC<DesktopAreaProps> = ({
   isFinderVisible, toggleFinderVisibility, bringFinderToFront, finderPosition, setFinderPosition, finderZIndex,
-  isSettingsVisible, toggleSettingsVisibility, bringSettingsToFront, settingsPosition, setSettingsPosition, settingsZIndex,
+  isSettingsVisible, toggleSettingsVisibility, bringSettingsToFront, settingsPosition, setSettingsPosition, settingsZIndex, theme, setTheme,
   isNotesVisible, toggleNotesVisibility, bringNotesToFront, notesPosition, setNotesPosition, notesZIndex, noteContent, setNoteContent,
   isWallpaperSettingsVisible, toggleWallpaperSettingsVisibility, bringWallpaperSettingsToFront, wallpaperSettingsPosition, setWallpaperSettingsPosition, wallpaperSettingsZIndex, 
   customWallpaperUrl, setCustomWallpaperUrl, customWallpaperDataUri, setCustomWallpaperDataUri,
@@ -257,17 +259,14 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     : defaultWallpapers[timeOfDay].hint;
 
   const handleWallpaperError = () => {
-    setWallpaperLoaded(true); // Ensure opacity transition happens even on error
+    setWallpaperLoaded(true); 
     if (customWallpaperDataUri) {
       console.warn('Failed to load custom wallpaper from Data URI. Clearing Data URI.');
-      setCustomWallpaperDataUri(null); // Clear bad Data URI
-      // The component will re-render, and if customWallpaperUrl exists, it will try that.
-      // If customWallpaperUrl also fails or is not set, it will go to default.
+      setCustomWallpaperDataUri(null); 
     } else if (customWallpaperUrl) {
       console.warn('Failed to load custom wallpaper from URL. Reverting to default.');
-      setCustomWallpaperUrl(null); // Revert to default dynamic wallpapers
+      setCustomWallpaperUrl(null); 
     }
-    // If it's a default wallpaper error, nothing specific to do here, console might show placehold.co issue.
   };
 
 
@@ -320,6 +319,8 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         desktopShortcuts={desktopShortcuts}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
+        currentTheme={theme}
+        setTheme={setTheme}
       />
       <NotesWindow
         isVisible={isNotesVisible}

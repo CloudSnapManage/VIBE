@@ -5,10 +5,12 @@ import React, { useState, type FormEvent, type MouseEvent as ReactMouseEvent } f
 import TrafficLights from './TrafficLights';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Settings as SettingsIcon, Plus, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Settings as SettingsIcon, Plus, Trash2, Sun, Moon } from 'lucide-react';
 import type { UserShortcut } from '@/lib/types';
 
 interface SettingsWindowProps {
@@ -23,6 +25,8 @@ interface SettingsWindowProps {
   desktopShortcuts: UserShortcut[];
   addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
   removeShortcut: (type: 'dock' | 'desktop', id: string) => void;
+  currentTheme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
 }
 
 const SettingsWindow: React.FC<SettingsWindowProps> = ({
@@ -37,22 +41,24 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
   desktopShortcuts,
   addShortcut,
   removeShortcut,
+  currentTheme,
+  setTheme,
 }) => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemUrl, setNewItemUrl] = useState('');
-  const [currentTab, setCurrentTab] = useState<'dock' | 'desktop'>('dock');
+  const [activeMainTab, setActiveMainTab] = useState<'shortcuts' | 'appearance'>('shortcuts');
+  const [activeShortcutTab, setActiveShortcutTab] = useState<'dock' | 'desktop'>('dock');
 
   if (!isVisible) {
     return null;
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleShortcutSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (newItemName.trim() && newItemUrl.trim()) {
       try {
-        // Basic URL validation
-        new URL(newItemUrl); // This will throw an error if URL is invalid
-        addShortcut(currentTab, newItemName, newItemUrl);
+        new URL(newItemUrl); 
+        addShortcut(activeShortcutTab, newItemName, newItemUrl);
         setNewItemName('');
         setNewItemUrl('');
       } catch (error) {
@@ -66,7 +72,7 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
   const renderShortcutList = (type: 'dock' | 'desktop') => {
     const items = type === 'dock' ? dockShortcuts : desktopShortcuts;
     return (
-      <ScrollArea className="h-[200px] mt-4 pr-3">
+      <ScrollArea className="h-[150px] mt-4 pr-3"> {/* Adjusted height */}
         <div className="space-y-2">
           {items.length === 0 && <p className="text-sm text-muted-foreground">No custom {type} shortcuts yet.</p>}
           {items.map((item) => (
@@ -87,14 +93,14 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
 
   return (
     <div
-      className="w-full max-w-lg h-[500px] bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden
-                 border border-black/10 absolute"
+      className="w-full max-w-xl h-[550px] bg-window-bg rounded-xl shadow-macos flex flex-col overflow-hidden
+                 border border-black/10 absolute" // Adjusted max-width and height
       style={{
         transform: `translate(${position.x}px, ${position.y}px)`,
         left: '50%',
         top: '50%',
-        marginLeft: '-16rem', // Half of max-w-lg
-        marginTop: '-250px', // Half of h-[500px]
+        marginLeft: '-16rem', // Half of new potential max-w-xl (32rem/2)
+        marginTop: '-275px', // Half of new h-[550px]
         zIndex,
         cursor: 'default',
       }}
@@ -111,69 +117,103 @@ const SettingsWindow: React.FC<SettingsWindowProps> = ({
           <SettingsIcon size={16} className="mr-1.5 text-primary" />
           <span id="settings-window-title">System Settings</span>
         </div>
-        <div className="w-14"></div> {/* Spacer for traffic lights */}
+        <div className="w-14"></div> 
       </header>
       <main className="flex-grow p-4 bg-background overflow-y-auto">
-        <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as 'dock' | 'desktop')} className="w-full">
+        <Tabs value={activeMainTab} onValueChange={(value) => setActiveMainTab(value as 'shortcuts' | 'appearance')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dock">Dock Shortcuts</TabsTrigger>
-            <TabsTrigger value="desktop">Desktop Shortcuts</TabsTrigger>
+            <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
+            <TabsTrigger value="appearance">Appearance</TabsTrigger>
           </TabsList>
-          <TabsContent value="dock">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Manage Dock Shortcuts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <Input
-                    type="text"
-                    placeholder="Shortcut Name (e.g., My Favorite Site)"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    aria-label="New dock shortcut name"
-                  />
-                  <Input
-                    type="url"
-                    placeholder="URL (e.g., https://example.com)"
-                    value={newItemUrl}
-                    onChange={(e) => setNewItemUrl(e.target.value)}
-                    aria-label="New dock shortcut URL"
-                  />
-                  <Button type="submit" className="w-full">
-                    <Plus className="mr-2 h-4 w-4" /> Add to Dock
-                  </Button>
-                </form>
-                {renderShortcutList('dock')}
-              </CardContent>
-            </Card>
+          
+          <TabsContent value="shortcuts">
+            <Tabs value={activeShortcutTab} onValueChange={(value) => setActiveShortcutTab(value as 'dock' | 'desktop')} className="w-full mt-2">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="dock">Dock Shortcuts</TabsTrigger>
+                <TabsTrigger value="desktop">Desktop Shortcuts</TabsTrigger>
+              </TabsList>
+              <TabsContent value="dock">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Manage Dock Shortcuts</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleShortcutSubmit} className="space-y-3">
+                      <Input
+                        type="text"
+                        placeholder="Shortcut Name (e.g., My Favorite Site)"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        aria-label="New dock shortcut name"
+                      />
+                      <Input
+                        type="url"
+                        placeholder="URL (e.g., https://example.com)"
+                        value={newItemUrl}
+                        onChange={(e) => setNewItemUrl(e.target.value)}
+                        aria-label="New dock shortcut URL"
+                      />
+                      <Button type="submit" className="w-full">
+                        <Plus className="mr-2 h-4 w-4" /> Add to Dock
+                      </Button>
+                    </form>
+                    {renderShortcutList('dock')}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="desktop">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Manage Desktop Shortcuts</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleShortcutSubmit} className="space-y-3">
+                      <Input
+                        type="text"
+                        placeholder="Shortcut Name (e.g., Work Portal)"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        aria-label="New desktop shortcut name"
+                      />
+                      <Input
+                        type="url"
+                        placeholder="URL (e.g., https://mywork.com)"
+                        value={newItemUrl}
+                        onChange={(e) => setNewItemUrl(e.target.value)}
+                        aria-label="New desktop shortcut URL"
+                      />
+                      <Button type="submit" className="w-full">
+                        <Plus className="mr-2 h-4 w-4" /> Add to Desktop
+                      </Button>
+                    </form>
+                    {renderShortcutList('desktop')}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
-          <TabsContent value="desktop">
+
+          <TabsContent value="appearance">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Manage Desktop Shortcuts</CardTitle>
+                <CardTitle className="text-lg">Appearance Settings</CardTitle>
+                <CardDescription>Customize the look and feel of your desktop.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <Input
-                    type="text"
-                    placeholder="Shortcut Name (e.g., Work Portal)"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    aria-label="New desktop shortcut name"
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                  <div className="flex items-center space-x-2">
+                    {currentTheme === 'light' ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-blue-400" />}
+                    <Label htmlFor="theme-toggle" className="text-sm font-medium">
+                      {currentTheme === 'light' ? 'Light Mode' : 'Dark Mode'}
+                    </Label>
+                  </div>
+                  <Switch
+                    id="theme-toggle"
+                    checked={currentTheme === 'dark'}
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                    aria-label={`Switch to ${currentTheme === 'light' ? 'dark' : 'light'} mode`}
                   />
-                  <Input
-                    type="url"
-                    placeholder="URL (e.g., https://mywork.com)"
-                    value={newItemUrl}
-                    onChange={(e) => setNewItemUrl(e.target.value)}
-                    aria-label="New desktop shortcut URL"
-                  />
-                  <Button type="submit" className="w-full">
-                    <Plus className="mr-2 h-4 w-4" /> Add to Desktop
-                  </Button>
-                </form>
-                {renderShortcutList('desktop')}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
