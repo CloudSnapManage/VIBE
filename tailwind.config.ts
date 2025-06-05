@@ -12,7 +12,7 @@ export default {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['Inter', 'sans-serif'],
-        code: ['monospace'],
+        code: ['monospace', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -55,21 +55,36 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
-        sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
+        sidebar: { // Keeping sidebar for potential future use or if shadcn components rely on it
+          DEFAULT: 'hsl(var(--background))', // Use main background for sidebar
+          foreground: 'hsl(var(--foreground))',
+          primary: 'hsl(var(--primary))',
+          'primary-foreground': 'hsl(var(--primary-foreground))',
+          accent: 'hsl(var(--accent))',
+          'accent-foreground': 'hsl(var(--accent-foreground))',
+          border: 'hsl(var(--border))',
+          ring: 'hsl(var(--ring))',
         },
+        'menubar-bg': 'rgba(var(--menubar-bg-rgb), 0.85)',
+        'menubar-fg': 'hsl(var(--menubar-fg))',
+        'dock-bg': 'rgba(var(--dock-bg-rgb), 0.75)',
+        'window-bg': 'hsl(var(--window-bg))',
+        'window-header-bg': 'hsl(var(--window-header-bg))',
+        'traffic-light': {
+          close: 'hsl(var(--traffic-light-close))',
+          minimize: 'hsl(var(--traffic-light-minimize))',
+          maximize: 'hsl(var(--traffic-light-maximize))',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        xl: 'calc(var(--radius) + 4px)', // For dock and window corners
+      },
+      boxShadow: {
+        'macos': '0 1px 3px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.05), 0 0 0 0.5px rgba(0,0,0,0.1)',
+        'dock': '0 0 20px rgba(0,0,0,0.15), 0 0 0 0.5px rgba(0,0,0,0.08)',
       },
       keyframes: {
         'accordion-down': {
@@ -88,10 +103,15 @@ export default {
             height: '0',
           },
         },
+        'window-open': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'window-open': 'window-open 0.2s ease-out forwards',
       },
     },
   },
