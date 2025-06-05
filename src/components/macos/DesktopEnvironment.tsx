@@ -5,7 +5,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import MenuBar from './MenuBar';
 import DesktopArea from './DesktopArea';
 import Dock from './Dock';
-import SettingsWindow from './SettingsWindow';
+// import SettingsWindow from './SettingsWindow'; // No longer directly rendered here
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import type { UserShortcut, AppDefinition } from '@/lib/types';
 import { FolderOpen, Settings, Search, Link as LinkIcon } from 'lucide-react'; // LinkIcon for generic URL icons
@@ -157,24 +157,12 @@ const DesktopEnvironment: React.FC = () => {
         setSettingsPosition={setSettingsPosition}
         settingsZIndex={settingsZIndex}
         desktopItems={combinedDesktopItems}
-      />
-      <SettingsWindow
-        isVisible={isSettingsVisible}
-        position={settingsPosition}
-        onClose={toggleSettingsVisibility}
-        onMinimize={toggleSettingsVisibility} 
-        onMaximize={() => console.log('Maximize Settings (not implemented)')}
-        onDragStart={(e) => {
-          bringSettingsToFront();
-          // Logic to handle drag start for settings window (similar to FinderWindow in DesktopArea)
-          // This might need to be lifted or duplicated if DesktopArea handles dragging for all windows
-        }}
-        zIndex={settingsZIndex}
         dockShortcuts={userDockShortcuts}
         desktopShortcuts={userDesktopShortcuts}
         addShortcut={addShortcut}
         removeShortcut={removeShortcut}
       />
+      {/* SettingsWindow is now rendered within DesktopArea */}
       <Dock items={combinedDockItems} />
     </div>
   );

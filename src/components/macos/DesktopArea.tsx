@@ -6,7 +6,7 @@ import Image from 'next/image';
 import FinderWindow from './FinderWindow';
 import SettingsWindow from './SettingsWindow'; // Import SettingsWindow
 import DesktopIcon from './DesktopIcon';
-import type { AppDefinition } from '@/lib/types';
+import type { AppDefinition, UserShortcut } from '@/lib/types';
 import { Link as LinkIcon } from 'lucide-react';
 
 
@@ -31,13 +31,15 @@ const DesktopClock: React.FC = () => {
   const [timeString, setTimeString] = useState<string | null>(null);
 
   useEffect(() => {
+    // This effect runs only on the client after hydration
     const update = () => setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    update(); // Initial set
+    update(); // Initial set on client
     const timerId = setInterval(update, 1000 * 60); // Update every minute for display
     return () => clearInterval(timerId);
-  }, []);
+  }, []); // Empty dependency array ensures this runs once on mount (client-side)
 
   if (timeString === null) {
+    // Render nothing or a placeholder on the server and during initial client render
     return null; 
   }
 
@@ -72,6 +74,12 @@ interface DesktopAreaProps {
   settingsZIndex: number;
   
   desktopItems: AppDefinition[];
+
+  // Props for SettingsWindow customization
+  dockShortcuts: UserShortcut[];
+  desktopShortcuts: UserShortcut[];
+  addShortcut: (type: 'dock' | 'desktop', name: string, url: string) => void;
+  removeShortcut: (type: 'dock' | 'desktop', id: string) => void;
 }
 
 const DesktopArea: React.FC<DesktopAreaProps> = ({
@@ -88,6 +96,10 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
   setSettingsPosition,
   settingsZIndex,
   desktopItems,
+  dockShortcuts,
+  desktopShortcuts,
+  addShortcut,
+  removeShortcut,
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
@@ -251,12 +263,10 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         onMaximize={() => console.log('Maximize Settings (not implemented)')}
         onDragStart={(e) => handleWindowDragStart(e, 'settings')}
         zIndex={settingsZIndex}
-        // These will be passed from DesktopEnvironment down to SettingsWindow directly
-        // For now, placeholders or ensure DesktopEnvironment passes them
-        dockShortcuts={[]} 
-        desktopShortcuts={[]}
-        addShortcut={() => {}}
-        removeShortcut={() => {}}
+        dockShortcuts={dockShortcuts} 
+        desktopShortcuts={desktopShortcuts}
+        addShortcut={addShortcut}
+        removeShortcut={removeShortcut}
       />
     </div>
   );
