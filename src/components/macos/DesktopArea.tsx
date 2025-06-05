@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent, useCallback } from 'react';
 import Image from 'next/image';
 import FinderWindow from './FinderWindow';
 import DesktopIcon from './DesktopIcon';
@@ -36,18 +36,15 @@ const DesktopClock: React.FC = () => {
   const [timeString, setTimeString] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set initial time on client-side mount
     setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-
     const timerId = setInterval(() => {
       setTimeString(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 1000); // Update every second, though visually it only changes per minute
+    }, 1000 * 60); // Update every minute, initial set to second for faster feedback
 
     return () => clearInterval(timerId);
   }, []);
 
   if (timeString === null) {
-    // Render nothing or a placeholder on the server and during initial client render
     return null; 
   }
 
@@ -79,8 +76,11 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
 }) => {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('day');
   const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
+
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const windowStartPos = useRef<{ x: number; y: number } | null>(null);
+  const latestMousePosition = useRef<{ clientX: number; clientY: number } | null>(null);
+  const animationFrameId = useRef<number | null>(null);
 
   useEffect(() => {
     setTimeOfDay(getTimeOfDay());
@@ -92,8 +92,6 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
 
   const desktopItems: DesktopItem[] = [
     { id: 'search-app', name: 'Search', icon: Search, actionType: 'toggleFinder' },
-    // Example of a desktop icon opening a URL
-    // { id: 'google-link', name: 'Google', icon: LinkIcon, actionType: 'openUrl', url: 'https://google.com' },
   ];
 
   const handleDesktopItemClick = (item: DesktopItem) => {
@@ -105,30 +103,74 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
     }
   };
   
-  const handleDragStart = (e: ReactMouseEvent<HTMLDivElement>) => {
-    bringFinderToFront();
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    windowStartPos.current = finderPosition; // Capture current position of the window
-    document.addEventListener('mousemove', handleDragging);
-    document.addEventListener('mouseup', handleDragEnd);
-  };
+  const performDragUpdate = useCallback(() => {
+    if (!dragStartPos.current || !windowStartPos.current || !latestMousePosition.current) {
+      animationFrameId.current = null; 
+      return;
+    }
 
-  const handleDragging = (e: MouseEvent) => {
-    if (!dragStartPos.current || !windowStartPos.current) return;
-    const dx = e.clientX - dragStartPos.current.x;
-    const dy = e.clientY - dragStartPos.current.y;
+    const dx = latestMousePosition.current.clientX - dragStartPos.current.x;
+    const dy = latestMousePosition.current.clientY - dragStartPos.current.y;
+
     setFinderPosition({
       x: windowStartPos.current.x + dx,
       y: windowStartPos.current.y + dy,
     });
-  };
 
-  const handleDragEnd = () => {
+    animationFrameId.current = null; 
+  }, [setFinderPosition]);
+
+  const handleDraggingInternal = useCallback((event: MouseEvent) => {
+    event.preventDefault();
+    latestMousePosition.current = { clientX: event.clientX, clientY: event.clientY };
+
+    if (animationFrameId.current === null) {
+      animationFrameId.current = requestAnimationFrame(performDragUpdate);
+    }
+  }, [performDragUpdate]);
+
+  const handleDragEndInternal = useCallback(() => {
+    if (animationFrameId.current !== null) {
+      cancelAnimationFrame(animationFrameId.current);
+      animationFrameId.current = null;
+    }
+
+    document.removeEventListener('mousemove', handleDraggingInternal);
+    document.removeEventListener('mouseup', handleDragEndInternal);
+
+    if (dragStartPos.current && windowStartPos.current && latestMousePosition.current) {
+       const dx = latestMousePosition.current.clientX - dragStartPos.current.x;
+       const dy = latestMousePosition.current.clientY - dragStartPos.current.y;
+       setFinderPosition({
+          x: windowStartPos.current.x + dx,
+          y: windowStartPos.current.y + dy,
+       });
+    }
+
     dragStartPos.current = null;
     windowStartPos.current = null;
-    document.removeEventListener('mousemove', handleDragging);
-    document.removeEventListener('mouseup', handleDragEnd);
-  };
+    latestMousePosition.current = null;
+  }, [handleDraggingInternal, setFinderPosition]);
+
+  const handleDragStart = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    bringFinderToFront();
+    dragStartPos.current = { x: event.clientX, y: event.clientY };
+    windowStartPos.current = finderPosition;
+    latestMousePosition.current = { clientX: event.clientX, clientY: event.clientY };
+
+    document.addEventListener('mousemove', handleDraggingInternal);
+    document.addEventListener('mouseup', handleDragEndInternal);
+  }, [bringFinderToFront, finderPosition, handleDraggingInternal, handleDragEndInternal]);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      document.removeEventListener('mousemove', handleDraggingInternal);
+      document.removeEventListener('mouseup', handleDragEndInternal);
+    };
+  }, [handleDraggingInternal, handleDragEndInternal]);
 
   const currentWallpaper = wallpapers[timeOfDay];
 
@@ -147,7 +189,6 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
       />
       <DesktopClock />
       
-      {/* Desktop Icons Area */}
       <div className="relative z-10 grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-4 w-full">
         {desktopItems.map((item) => (
           <DesktopIcon
@@ -163,7 +204,7 @@ const DesktopArea: React.FC<DesktopAreaProps> = ({
         isVisible={isFinderVisible}
         position={finderPosition}
         onClose={toggleFinderVisibility}
-        onMinimize={toggleFinderVisibility} // Simple hide for now
+        onMinimize={toggleFinderVisibility} 
         onMaximize={() => console.log('Maximize Finder (not implemented)')}
         onDragStart={handleDragStart}
         zIndex={finderZIndex}

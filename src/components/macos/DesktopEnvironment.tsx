@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import MenuBar from './MenuBar';
 import DesktopArea from './DesktopArea';
 import Dock from './Dock';
@@ -12,27 +12,30 @@ const DesktopEnvironment: React.FC = () => {
   const [finderZIndex, setFinderZIndex] = useState(20); // Windows start at z-index 20
   const [maxZIndex, setMaxZIndex] = useState(20);
 
-  const toggleFinderVisibility = () => {
-    setIsFinderVisible(prev => !prev);
-    if (!isFinderVisible) { // If will become visible
-      bringFinderToFront();
-    }
-  };
-
-  const bringFinderToFront = () => {
+  const bringFinderToFront = useCallback(() => {
     setMaxZIndex(prevMax => {
       const newZ = prevMax + 1;
       setFinderZIndex(newZ);
       return newZ;
     });
-  };
+  }, []); // setMaxZIndex and setFinderZIndex are stable
+
+  const toggleFinderVisibility = useCallback(() => {
+    setIsFinderVisible(prev => {
+      const newVisibility = !prev;
+      if (newVisibility) { // If will become visible
+        bringFinderToFront();
+      }
+      return newVisibility;
+    });
+  }, [bringFinderToFront]);
   
-  const handleDockFinderClick = () => {
+  const handleDockFinderClick = useCallback(() => {
     if (!isFinderVisible) {
       setIsFinderVisible(true);
     }
     bringFinderToFront();
-  }
+  }, [isFinderVisible, bringFinderToFront]);
 
   return (
     <div 
