@@ -61,7 +61,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onToggleFinder }) => {
     >
       <div className="flex items-center gap-3">
         <AppleLogoIcon className="h-4 w-4 text-menubar-fg" />
-        <span className="font-semibold">SequoiaTab</span>
+        <span className="font-semibold">Vibe</span>
         {menuItems.map((item) => (
           <MenuBarItem key={item}>{item}</MenuBarItem>
         ))}

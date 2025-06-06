@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'SequoiaTab',
-  description: 'A macOS Sequoia inspired new tab experience.',
+  title: 'Vibe',
+  description: 'A modern new tab experience.',
 };
 
 export default function RootLayout({
